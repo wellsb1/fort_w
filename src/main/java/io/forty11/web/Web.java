@@ -27,9 +27,7 @@ import java.io.InputStream;
 import java.net.URL;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 import javax.net.ssl.HostnameVerifier;
@@ -59,11 +57,9 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
 import io.forty11.j.J;
-import io.forty11.j.api.ApiMethod;
 import io.forty11.j.api.Files;
 import io.forty11.j.api.Lang;
 import io.forty11.j.api.Streams;
-import io.forty11.j.api.Strings;
 
 /**
  * 
@@ -73,28 +69,6 @@ import io.forty11.j.api.Strings;
 public class Web
 {
    static Map<String, String> mimeTypes = new LinkedHashMap();
-
-   static
-   {
-      mimeTypes.put("atom", "application/atom+xml");
-      mimeTypes.put("gif", "image/gif");
-      mimeTypes.put("png", "image/png");
-      mimeTypes.put("jpg", "image/jpeg");
-      mimeTypes.put("jpeg", "image/jpeg");
-      mimeTypes.put("json", "application/json");
-      mimeTypes.put("rss", "application/rss+xml");
-   }
-
-   public static class Response
-   {
-      public int                           code    = 0;
-      public String                        status  = "";
-      public String                        body    = null;
-      public Exception                     error   = null;
-      public String                        log     = "";
-
-      public LinkedHashMap<String, String> headers = new LinkedHashMap();
-   }
 
    public static Response restGet(String url, String... reqHeaders) throws Exception
    {
@@ -160,8 +134,7 @@ public class Web
          ((HttpEntityEnclosingRequestBase) req).setEntity(new StringEntity(json));
       }
 
-      RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(timeout).setConnectTimeout(timeout)
-                                                 .setConnectionRequestTimeout(timeout).build();
+      RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(timeout).setConnectTimeout(timeout).setConnectionRequestTimeout(timeout).build();
       req.setConfig(requestConfig);
 
       hr = h.execute(req);
@@ -189,44 +162,7 @@ public class Web
 
    }
 
-   public static String getMimeType(String fileName)
-   {
-      String ext = Files.getFileExtension(fileName);
 
-      if (!Lang.empty(ext))
-      {
-         return mimeTypes.get(ext.toLowerCase());
-      }
-      return null;
-   }
-
-   public static String getFileNameMimeTypeFileExtension(String fileName)
-   {
-      String ext = Files.getFileExtension(fileName);
-      if (ext != null)
-      {
-         ext = ext.toLowerCase();
-         if (mimeTypes.containsKey(ext))
-         {
-            return ext;
-         }
-      }
-      return null;
-   }
-
-   public static List<String> getMimeTypeFileExtensions(String mimeType)
-   {
-      List<String> exts = new ArrayList();
-      for (String ext : mimeTypes.keySet())
-      {
-         String type = mimeTypes.get(ext);
-         if (Strings.wildcardMatch(mimeType, type))
-         {
-            exts.add(ext);
-         }
-      }
-      return exts;
-   }
 
    /**
     * @see http://literatejava.com/networks/ignore-ssl-certificate-errors-apache-httpclient-4-4/
@@ -261,12 +197,7 @@ public class Web
 
       // now, we create connection-manager using our Registry.
       //      -- allows multi-threaded use
-      PoolingHttpClientConnectionManager connMgr = new PoolingHttpClientConnectionManager(RegistryBuilder.<ConnectionSocketFactory>create()
-                                                                                                         .register("http",
-                                                                                                               PlainConnectionSocketFactory.getSocketFactory())
-                                                                                                         .register("https",
-                                                                                                               sslSocketFactory)
-                                                                                                         .build());
+      PoolingHttpClientConnectionManager connMgr = new PoolingHttpClientConnectionManager(RegistryBuilder.<ConnectionSocketFactory> create().register("http", PlainConnectionSocketFactory.getSocketFactory()).register("https", sslSocketFactory).build());
       b.setConnectionManager(connMgr);
 
       // finally, build the HttpClient;
@@ -276,7 +207,11 @@ public class Web
       return client;
    }
 
-   @ApiMethod
+   public static WebFile wget(String url) throws IOException
+   {
+      return wget(url, -1);
+   }
+
    public static WebFile wget(String url, long maxLength) throws IOException
    {
       WebFile file = new WebFile();
@@ -284,7 +219,6 @@ public class Web
       return wget(file, maxLength);
    }
 
-   @ApiMethod
    public static WebFile wget(WebFile file, final long maxLength) throws IOException
    {
       try
@@ -402,6 +336,62 @@ public class Web
       }
    }
 
+   public static class Response
+   {
+      public int                           code    = 0;
+      public String                        status  = "";
+      public String                        body    = null;
+      public Exception                     error   = null;
+      public String                        log     = "";
+
+      public LinkedHashMap<String, String> headers = new LinkedHashMap();
+
+      public int getCode()
+      {
+         return code;
+      }
+
+      public String getStatus()
+      {
+         return status;
+      }
+
+      public String getBody()
+      {
+         return body;
+      }
+
+      public Exception getError()
+      {
+         return error;
+      }
+
+      public String getLog()
+      {
+         return log;
+      }
+
+      public LinkedHashMap<String, String> getHeaders()
+      {
+         return new LinkedHashMap(headers);
+      }
+
+      public String getHeader(String header)
+      {
+         String value = headers.get(header);
+         if (value == null)
+         {
+            for (String key : headers.keySet())
+            {
+               if (key.equalsIgnoreCase(header))
+                  return headers.get(key);
+            }
+         }
+         return null;
+      }
+
+   }
+
    public static class WebFile
    {
       String      url         = null;
@@ -451,10 +441,6 @@ public class Web
          }
 
          this.url = url;
-         if (Lang.empty(type) || "unknown/unknown".equals(type))
-         {
-            type = getMimeType(url);
-         }
 
          if (Lang.empty(fileName))
          {
