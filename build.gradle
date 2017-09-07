@@ -19,7 +19,7 @@ sourceCompatibility = 1.6
 
 dependencies {
 
-	if (gradle.ext.addFortJProjectToClasspath) {
+	if (gradle.ext.fortw['addFortJProjectToClasspath']) {
     	compile findProject(":fort_j")
     }
     else {
