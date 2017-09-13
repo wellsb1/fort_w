@@ -17,18 +17,23 @@
  */
 package io.forty11.web;
 
+import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.RunnableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
@@ -53,13 +58,11 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.ssl.SSLContextBuilder;
 import org.apache.http.ssl.TrustStrategy;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 
 import io.forty11.j.J;
-import io.forty11.j.api.Files;
 import io.forty11.j.api.Lang;
 import io.forty11.j.api.Streams;
+import io.forty11.utils.Executor;
 
 /**
  * 
@@ -68,108 +71,183 @@ import io.forty11.j.api.Streams;
  */
 public class Web
 {
-   static Map<String, String> mimeTypes = new LinkedHashMap();
+   static final int POOL_MIN  = 2;
+   static final int POOL_MAX  = 100;
+   static final int QUEUE_MAX = 500;
 
-   public static Response restGet(String url, String... reqHeaders) throws Exception
+   static Executor  pool      = null;
+
+   public static FutureResponse get(String url)
    {
-      return rest("GET", url, null, reqHeaders);
+      return rest("GET", url, null, null);
    }
 
-   public static Response restPut(String url, String json, String... reqHeaders) throws Exception
+   public static FutureResponse get(String url, List<String> headers)
    {
-      return rest("PUT", url, json, reqHeaders);
+      return rest("GET", url, null, headers);
    }
 
-   public static Response restPost(String url, String json, String... reqHeaders) throws Exception
+   public static FutureResponse put(String url, String json)
    {
-      return rest("POST", url, json, reqHeaders);
+      return rest("PUT", url, json, null);
    }
 
-   public static Response restDelete(String url, String... reqHeaders) throws Exception
+   public static FutureResponse put(String url, String body, List<String> headers)
    {
-      return rest("DELETE", url, null, reqHeaders);
+      return rest("PUT", url, body, headers);
    }
 
-   public static Response rest(String m, String url, String json, String... headers) throws Exception
+   public static FutureResponse post(String url, String body)
    {
-      //System.out.println("REST:" + m + " " + url);
+      return rest("POST", url, body, null);
+   }
 
-      int timeout = 30000;
-      Response r = new Response();
+   public static FutureResponse post(String url, String body, List<String> headers)
+   {
+      return rest("POST", url, body, headers);
+   }
 
-      HttpClient h = getHttpClient();
-      HttpResponse hr = null;
+   public static FutureResponse delete(String url)
+   {
+      return rest("DELETE", url, null, null);
+   }
 
-      r.log += "\r\n--request header------";
-      r.log += "\r\n" + m + " " + url;
+   public static FutureResponse delete(String url, List<String> headers)
+   {
+      return rest("DELETE", url, null, headers);
+   }
 
-      HttpRequestBase req = null;
+   public static FutureResponse rest(final String m, final String url, final String body, final List<String> headers)
+   {
+      final FutureResponse future = new FutureResponse()
+         {
+            public void run()
+            {
+               Response response = new Response(url);
+               HttpRequestBase req = null;
 
-      if ("post".equalsIgnoreCase(m))
-      {
-         req = new HttpPost(url);
-      }
-      if ("put".equalsIgnoreCase(m))
-      {
-         req = new HttpPut(url);
-      }
-      else if ("get".equalsIgnoreCase(m))
-      {
-         req = new HttpGet(url);
-      }
-      else if ("delete".equalsIgnoreCase(m))
-      {
-         req = new HttpDelete(url);
-      }
+               try
+               {
+                  int timeout = 30000;
 
-      for (int i = 0; headers != null && i < headers.length - 1; i += 2)
-      {
-         req.setHeader(headers[i], headers[i + 1]);
-         r.log += "\r\n" + headers[i] + ": " + headers[i + 1];
-      }
-      if (json != null && req instanceof HttpEntityEnclosingRequestBase)
-      {
-         r.log += "\r\n--request body--------";
-         r.log += "\r\n" + json;
-         ((HttpEntityEnclosingRequestBase) req).setEntity(new StringEntity(json));
-      }
+                  HttpClient h = getHttpClient();
+                  HttpResponse hr = null;
 
-      RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(timeout).setConnectTimeout(timeout).setConnectionRequestTimeout(timeout).build();
-      req.setConfig(requestConfig);
+                  response.log += "\r\n--request header------";
+                  response.log += "\r\n" + m + " " + url;
 
-      hr = h.execute(req);
+                  if ("post".equalsIgnoreCase(m))
+                  {
+                     req = new HttpPost(url);
+                  }
+                  if ("put".equalsIgnoreCase(m))
+                  {
+                     req = new HttpPut(url);
+                  }
+                  else if ("get".equalsIgnoreCase(m))
+                  {
+                     req = new HttpGet(url);
+                  }
+                  else if ("delete".equalsIgnoreCase(m))
+                  {
+                     req = new HttpDelete(url);
+                  }
 
-      HttpEntity e = hr.getEntity();
+                  for (int i = 0; headers != null && i < headers.size() - 1; i += 2)
+                  {
+                     req.setHeader(headers.get(i), headers.get(i + 1));
+                     response.log += "\r\n" + headers.get(i) + ": " + headers.get(i + 1);
+                  }
+                  if (body != null && req instanceof HttpEntityEnclosingRequestBase)
+                  {
+                     response.log += "\r\n--request body--------";
+                     //response.log += "\r\n" + json;
+                     ((HttpEntityEnclosingRequestBase) req).setEntity(new StringEntity(body));
+                  }
 
-      r.status = hr.getStatusLine().toString();
-      r.code = hr.getStatusLine().getStatusCode();
+                  RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(timeout).setConnectTimeout(timeout).setConnectionRequestTimeout(timeout).build();
+                  req.setConfig(requestConfig);
 
-      r.log += "\r\n--response headers -----";
-      r.log += "\r\n" + "status: " + r.status;
-      for (Header header : hr.getAllHeaders())
-      {
-         r.log += header.getName() + ": " + header.getValue();
-         r.headers.put(header.getName(), header.getValue());
-      }
+                  hr = h.execute(req);
 
-      String rbody = J.read(e.getContent());
-      r.body = rbody;
+                  HttpEntity e = hr.getEntity();
 
-      r.log += "\r\n--response body------";
-      r.log += "\r\n" + rbody;
+                  response.status = hr.getStatusLine().toString();
+                  response.code = hr.getStatusLine().getStatusCode();
 
-      return r;
+                  response.log += "\r\n--response headers -----";
+                  response.log += "\r\n" + "status: " + response.status;
+                  for (Header header : hr.getAllHeaders())
+                  {
+                     response.log += header.getName() + ": " + header.getValue();
+                     response.headers.put(header.getName(), header.getValue());
+                  }
+
+                  //String rbody = J.read(e.getContent());
+                  //r.body = rbody;
+
+                  InputStream is = e.getContent();
+
+                  Url u = new Url(url);
+                  String fileName = u.getFile();
+                  File tempFile = J.createTempFile(fileName);
+                  try
+                  {
+                     Streams.pipe(is, new FileOutputStream(tempFile));
+                  }
+                  catch (IOException ex)
+                  {
+                     tempFile.delete();
+                     throw ex;
+                  }
+
+                  response.setFile(tempFile);
+
+               }
+               catch (Exception ex)
+               {
+                  response.error = ex;
+                  response.file = null;
+               }
+               finally
+               {
+                  if (req != null)
+                  {
+                     try
+                     {
+                        req.releaseConnection();
+                     }
+                     catch (Exception ex)
+                     {
+                        ex.printStackTrace();
+                     }
+                  }
+
+                  setResponse(response);
+               }
+
+            }
+         };
+
+      submit(future);
+      return future;
 
    }
 
+   static synchronized void submit(FutureResponse future)
+   {
+      if (pool == null)
+         pool = new Executor(POOL_MIN, POOL_MAX, QUEUE_MAX);
 
+      pool.submit(future);
+   }
 
    /**
     * @see http://literatejava.com/networks/ignore-ssl-certificate-errors-apache-httpclient-4-4/
     * @return
     * @throws Exception
     */
-   public static HttpClient getHttpClient() throws Exception
+   public static synchronized HttpClient getHttpClient() throws Exception
    {
       HttpClientBuilder b = HttpClientBuilder.create();
 
@@ -207,144 +285,240 @@ public class Web
       return client;
    }
 
-   public static WebFile wget(String url) throws IOException
+   public static abstract class FutureResponse implements RunnableFuture<Response>
    {
-      return wget(url, -1);
-   }
+      Response              response   = null;
+      List<ResponseHandler> onSuccess  = new ArrayList();
+      List<ResponseHandler> onFailure  = new ArrayList();
+      List<ResponseHandler> onResponse = new ArrayList();
 
-   public static WebFile wget(String url, long maxLength) throws IOException
-   {
-      WebFile file = new WebFile();
-      file.setUrl(url);
-      return wget(file, maxLength);
-   }
-
-   public static WebFile wget(WebFile file, final long maxLength) throws IOException
-   {
-      try
+      public FutureResponse onSuccess(ResponseHandler handler)
       {
-         String url = file.getUrl();
-
-         url = url.trim();
-         url = url.replaceAll(" ", "%20");
-
-         HttpClient httpClient = getHttpClient();
-
-         final HttpGet get = new HttpGet(url);
-         //get.setFollowRedirects(true);
-
-         HttpResponse response = httpClient.execute(get);
-         HttpEntity entity = response.getEntity();
-         if (entity != null)
+         boolean done = false;
+         synchronized (this)
          {
-            long len = entity.getContentLength();
-            InputStream inputStream = entity.getContent();
-            URL uri = new URL(get.getURI().toString());
-
-            file.url = uri.toString();
-            file.fileName = uri.getFile();
-
-            file.length = len;
-            if (maxLength > 0 && file.length > maxLength)
-               throw new IOException("file exceeds maximum length");
-
-            if (entity.getContentType() != null)
+            done = isDone();
+            if (!done)
             {
-               String mt = entity.getContentType().getValue();
-               if (mt.indexOf(':') > 0)
-                  mt = mt.substring(mt.indexOf(':') + 1, mt.length()).trim();
+               onSuccess.add(handler);
+            }
+         }
 
-               if (mt.indexOf(';') > 0)
-                  mt = mt.substring(0, mt.indexOf(';'));
+         if (done && isSuccess())
+         {
+            try
+            {
+               handler.onResponse(response);
+            }
+            catch (Throwable ex)
+            {
+               ex.printStackTrace();
+            }
+         }
 
-               file.type = mt;
+         return this;
+      }
+
+      public FutureResponse onFailure(ResponseHandler handler)
+      {
+         boolean done = false;
+         synchronized (this)
+         {
+            done = isDone();
+            if (!done)
+            {
+               onFailure.add(handler);
+            }
+         }
+
+         if (done && !isSuccess())
+         {
+            try
+            {
+               handler.onResponse(response);
+            }
+            catch (Throwable ex)
+            {
+               ex.printStackTrace();
+            }
+         }
+
+         return this;
+      }
+
+      public FutureResponse onResponse(ResponseHandler handler)
+      {
+         boolean done = false;
+         synchronized (this)
+         {
+            done = isDone();
+            if (!done)
+            {
+               onResponse.add(handler);
+            }
+         }
+
+         if (done)
+         {
+            try
+            {
+               handler.onResponse(response);
+            }
+            catch (Throwable ex)
+            {
+               ex.printStackTrace();
+            }
+         }
+
+         return this;
+      }
+
+      public void setResponse(Response response)
+      {
+         synchronized (this)
+         {
+            this.response = response;
+
+            if (isSuccess())
+            {
+               for (ResponseHandler h : onSuccess)
+               {
+                  try
+                  {
+                     h.onResponse(response);
+                  }
+                  catch (Throwable ex)
+                  {
+                     ex.printStackTrace();
+                  }
+               }
+            }
+            else
+            {
+               for (ResponseHandler h : onFailure)
+               {
+                  try
+                  {
+                     h.onResponse(response);
+                  }
+                  catch (Throwable ex)
+                  {
+                     ex.printStackTrace();
+                  }
+               }
             }
 
-            file.inputStream = new FilterInputStream(inputStream)
+            for (ResponseHandler h : onResponse)
+            {
+               try
                {
-                  long    total  = 0;
-                  boolean closed = false;
+                  h.onResponse(response);
+               }
+               catch (Throwable ex)
+               {
+                  ex.printStackTrace();
+               }
+            }
 
-                  protected void check() throws IOException
-                  {
-                     if (maxLength > 0 && (total > maxLength))
-                     {
-                        close();
-                        throw new IOException("exceeded maxLength: " + total + " > " + maxLength);
-                     }
-                  }
-
-                  @Override
-                  public int read() throws IOException
-                  {
-                     total += 1;
-                     check();
-                     return super.read();
-                  }
-
-                  @Override
-                  public int read(byte[] b, int off, int len) throws IOException
-                  {
-                     int read = super.read(b, off, len);
-                     total += read;
-                     check();
-
-                     return read;
-                  }
-
-                  @Override
-                  public void close() throws IOException
-                  {
-                     try
-                     {
-                        closed = true;
-                        get.releaseConnection();
-                     }
-                     catch (Exception ex)
-                     {
-
-                     }
-                     super.close();
-                  }
-
-                  @Override
-                  protected void finalize() throws Throwable
-                  {
-                     if (!closed)
-                        close();
-
-                     super.finalize();
-                  }
-               };
-
+            notifyAll();
          }
-         else
+      }
+
+      @Override
+      public boolean cancel(boolean arg0)
+      {
+         return false;
+      }
+
+      @Override
+      public Response get()
+      {
+         while (response == null)
          {
-            return null;
+            synchronized (this)
+            {
+               if (response == null)
+               {
+                  try
+                  {
+                     wait();
+                  }
+                  catch (Exception ex)
+                  {
+
+                  }
+               }
+            }
          }
 
-         return file;
+         return response;
       }
-      catch (IOException ex)
+
+      public boolean isSuccess()
       {
-         throw ex;
+         if (response != null && response.error == null && response.code >= 200 && response.code < 300)
+            return true;
+
+         return false;
       }
-      catch (Throwable t)
+
+      public Response get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException
       {
-         t.printStackTrace();
-         throw new IOException(t.getMessage(), t);
+         timeout = unit.convert(timeout, TimeUnit.MILLISECONDS);
+         long start = System.currentTimeMillis();
+         while (!isDone())
+         {
+            long now = System.currentTimeMillis();
+            if (now - start >= timeout)
+            {
+               J.sleep(250);
+            }
+         }
+
+         return response;
       }
+
+      @Override
+      public boolean isCancelled()
+      {
+         return false;
+      }
+
+      @Override
+      public boolean isDone()
+      {
+         return response != null;
+      }
+   }
+
+   static interface ResponseHandler
+   {
+      public void onResponse(Response response) throws Exception;
    }
 
    public static class Response
    {
-      public int                           code    = 0;
-      public String                        status  = "";
-      public String                        body    = null;
-      public Exception                     error   = null;
-      public String                        log     = "";
+      String                               url      = null;
+      String                               fileName = null;
+      File                                 file     = null;
+      long                                 length   = -1;
+      String                               type     = null;
+      public int                           code     = 0;
+      public String                        status   = "";
+      public Exception                     error    = null;
+      public String                        log      = "";
 
-      public LinkedHashMap<String, String> headers = new LinkedHashMap();
+      public LinkedHashMap<String, String> headers  = new LinkedHashMap();
+
+      Response(String url)
+      {
+         setUrl(url);
+      }
+
+      public boolean isSuccess()
+      {
+         return code >= 200 && code <= 300 && error == null;
+      }
 
       public int getCode()
       {
@@ -354,11 +528,6 @@ public class Web
       public String getStatus()
       {
          return status;
-      }
-
-      public String getBody()
-      {
-         return body;
       }
 
       public Exception getError()
@@ -387,49 +556,47 @@ public class Web
                   return headers.get(key);
             }
          }
+         return value;
+      }
+
+      public InputStream getInputStream() throws IOException
+      {
+         if (file != null)
+            return new BufferedInputStream(new FileInputStream(file));
+
          return null;
       }
 
-   }
-
-   public static class WebFile
-   {
-      String      url         = null;
-      String      fileName    = null;
-      long        length      = -1;
-      String      type        = "unknown/unknown";
-
-      InputStream inputStream = null;
-      File        tempFile    = null;
-
-      Document    document    = null;
-      Element     element     = null;
-      String      comment     = null;
-      String      title       = null;
-
-      public WebFile()
+      public String getContent()
       {
-
+         try
+         {
+            if(file != null && file.length() > 0)
+            {
+               String string = J.read(file);
+               return string;
+            }
+         }
+         catch (Exception ex)
+         {
+            J.rethrow(ex);
+         }
+         return null;
       }
 
-      public WebFile(String url)
+      public void setFile(File file) throws Exception
       {
-         setUrl(url);
+         this.file = file;
       }
 
-      public WebFile(File tempFile)
+      public long getLength()
       {
-         setTempFile(tempFile);
+         return length;
       }
 
-      public boolean isDownloaded()
+      public void setLength(long length)
       {
-         return tempFile != null || inputStream != null;
-      }
-
-      public String getUrl()
-      {
-         return url;
+         this.length = length;
       }
 
       public void setUrl(String url)
@@ -462,125 +629,50 @@ public class Web
          return fileName;
       }
 
-      public void setFileName(String fileName)
+      public Response onSuccess(ResponseHandler handler)
       {
-         this.fileName = fileName;
-      }
-
-      public long getLength()
-      {
-         return length;
-      }
-
-      public void setLength(long length)
-      {
-         this.length = length;
-      }
-
-      public String getType()
-      {
-         return type;
-      }
-
-      public void setType(String type)
-      {
-         this.type = type;
-      }
-
-      public Document getDocument()
-      {
-         return document;
-      }
-
-      public void setDocument(Document document)
-      {
-         this.document = document;
-      }
-
-      public Element getElement()
-      {
-         return element;
-      }
-
-      public void setElement(Element element)
-      {
-         this.element = element;
-      }
-
-      public String getComment()
-      {
-         return comment;
-      }
-
-      public void setComment(String comment)
-      {
-         this.comment = comment;
-      }
-
-      public String getTitle()
-      {
-         return title;
-      }
-
-      public void setTitle(String title)
-      {
-         this.title = title;
-      }
-
-      public InputStream getInputStream() throws IOException
-      {
-         if (tempFile != null)
-            return new FileInputStream(tempFile);
-
-         if (inputStream == null)
-            wget(this, -1);
-
-         InputStream temp = inputStream;
-         inputStream = null;
-
-         return temp;
-      }
-
-      public void setInputStream(InputStream inputStream)
-      {
-         this.inputStream = inputStream;
-      }
-
-      public String getContent() throws Exception
-      {
-         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-         Streams.pipe(getInputStream(), baos);
-         return new String(baos.toByteArray());
-      }
-
-      public File getTempFile() throws Exception
-      {
-         if (tempFile == null)
+         if (isSuccess())
          {
-            InputStream is = getInputStream();
-            tempFile = Files.createTempFile(getFileName());//File.createTempFile("download", ".tmp");
             try
             {
-               Streams.pipe(is, new FileOutputStream(tempFile));
+               handler.onResponse(this);
             }
-            catch (IOException ex)
+            catch (Exception ex)
             {
-               tempFile.delete();
-               throw ex;
+               ex.printStackTrace();
             }
-
          }
-
-         setTempFile(tempFile);
-         return tempFile;
+         return this;
       }
 
-      public void setTempFile(File tempFile)
+      public Response onFailure(ResponseHandler handler)
       {
-         if (length < 0)
-            setLength(tempFile.length());
-
-         this.tempFile = tempFile;
+         if (!isSuccess())
+         {
+            try
+            {
+               handler.onResponse(this);
+            }
+            catch (Exception ex)
+            {
+               ex.printStackTrace();
+            }
+         }
+         return this;
       }
+
+      public Response onResponse(ResponseHandler handler)
+      {
+         try
+         {
+            handler.onResponse(this);
+         }
+         catch (Exception ex)
+         {
+            ex.printStackTrace();
+         }
+         return this;
+      }
+
    }
 }
