@@ -100,8 +100,8 @@ public class TestWebGet
       // disable the proxy so the first request fails
       proxy.disable();
 
-      // after 1 second enable the proxy so the re-try will succeed
-      _enableProxyAfter(proxy, 1000);
+      // after 2 second enable the proxy so the re-try will succeed
+      _enableProxyAfter(proxy, 2000);
 
       String url = "http://localhost:21212/files.liftck.com/test/large-01.jpg";
 
