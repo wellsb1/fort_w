@@ -42,6 +42,8 @@ public class TestWebGet
       System.out.println("It is simple to install on Mac with.. ");
       System.out.println("    brew tap shopify/shopify");
       System.out.println("    brew install toxiproxy");
+      System.out.println("For Windows, download ToxiProxy at the following link to run the app... ");
+      System.out.println("    https://github.com/Shopify/toxiproxy/releases/download/v2.1.2/toxiproxy-server-windows-amd64.exe");
    }
 
    @Before
