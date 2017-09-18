@@ -1042,7 +1042,6 @@ public class Web
          {
             if (file != null)
             {
-               System.out.println("!!!!!!!!!!! DeleteFileOnCloseInputStream -- deleting.. " + file);
                file.delete();
                file = null;
             }
