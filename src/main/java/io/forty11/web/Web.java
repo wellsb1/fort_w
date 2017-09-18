@@ -20,6 +20,7 @@ package io.forty11.web;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -39,6 +40,8 @@ import java.util.concurrent.TimeoutException;
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -72,6 +75,8 @@ import io.forty11.utils.Executor;
  */
 public class Web
 {
+   static Log           log                    = LogFactory.getLog(Web.class);
+
    static final int     POOL_MIN               = 2;
    static final int     POOL_MAX               = 100;
    static final int     QUEUE_MAX              = 500;
@@ -244,6 +249,7 @@ public class Web
                   else
                   {
                      tempFile = J.createTempFile(fileName);
+                     tempFile.deleteOnExit();
                      debug("## Creating temp file .. " + tempFile);
                   }
 
@@ -263,9 +269,7 @@ public class Web
                catch (Exception ex)
                {
                   response.error = ex;
-                  //response.file = null;
-
-                  debug("CATCH EX: " + ex);
+                  log.info("Exception in rest call. " + url, ex);
                }
                finally
                {
@@ -277,7 +281,7 @@ public class Web
                      }
                      catch (Exception ex)
                      {
-                        ex.printStackTrace();
+                        log.info("Exception trying to release the request connection", ex);
                      }
                   }
 
@@ -308,6 +312,12 @@ public class Web
                         debug("Deleting temp file: " + tempFile);
                         tempFile.delete();
                      }
+
+                     if (response.getError() != null)
+                     {
+                        log.warn("Error in Web.rest() . " + m + " : " + url, response.getError());
+                     }
+
                   }
 
                   setResponse(response);
@@ -508,7 +518,7 @@ public class Web
             }
             catch (Throwable ex)
             {
-               ex.printStackTrace();
+               log.error("Error handling onSuccess", ex);
             }
          }
 
@@ -535,7 +545,7 @@ public class Web
             }
             catch (Throwable ex)
             {
-               ex.printStackTrace();
+               log.error("Error handling onFailure", ex);
             }
          }
 
@@ -562,7 +572,7 @@ public class Web
             }
             catch (Throwable ex)
             {
-               ex.printStackTrace();
+               log.error("Error handling onResponse", ex);
             }
          }
 
@@ -585,7 +595,7 @@ public class Web
                   }
                   catch (Throwable ex)
                   {
-                     ex.printStackTrace();
+                     log.error("Error handling success callbacks in setResponse", ex);
                   }
                }
             }
@@ -599,7 +609,7 @@ public class Web
                   }
                   catch (Throwable ex)
                   {
-                     ex.printStackTrace();
+                     log.error("Error handling failure callbacks in setResponse", ex);
                   }
                }
             }
@@ -612,7 +622,7 @@ public class Web
                }
                catch (Throwable ex)
                {
-                  ex.printStackTrace();
+                  log.error("Error handling callbacks in setResponse", ex);
                }
             }
 
@@ -734,6 +744,8 @@ public class Web
 
    public static class Response
    {
+      static Log                           logger            = LogFactory.getLog(Response.class);
+
       String                               url               = null;
       String                               fileName          = null;
       File                                 file              = null;
@@ -802,7 +814,7 @@ public class Web
       public InputStream getInputStream() throws IOException
       {
          if (file != null)
-            return new BufferedInputStream(new FileInputStream(file));
+            return new BufferedInputStream(new DeleteFileOnCloseInputStream(file));
 
          return null;
       }
@@ -813,7 +825,7 @@ public class Web
          {
             if (file != null && file.length() > 0)
             {
-               String string = J.read(file);
+               String string = J.read(getInputStream());
                return string;
             }
          }
@@ -961,7 +973,7 @@ public class Web
             }
             catch (Exception ex)
             {
-               ex.printStackTrace();
+               logger.error("Error handling onSuccess", ex);
             }
          }
          return this;
@@ -977,7 +989,7 @@ public class Web
             }
             catch (Exception ex)
             {
-               ex.printStackTrace();
+               logger.error("Error handling onFailure", ex);
             }
          }
          return this;
@@ -991,7 +1003,7 @@ public class Web
          }
          catch (Exception ex)
          {
-            ex.printStackTrace();
+            logger.error("Error handling onResponse", ex);
          }
          return this;
       }
@@ -1004,4 +1016,38 @@ public class Web
 
    }
 
+   /**
+    * Simple FileInputStream that will attempt to delete the file onf close of the inputstream
+    *
+    */
+   public static class DeleteFileOnCloseInputStream extends FileInputStream
+   {
+
+      private File file;
+
+      public DeleteFileOnCloseInputStream(File file) throws FileNotFoundException
+      {
+         super(file);
+         this.file = file;
+      }
+
+      @Override
+      public void close() throws IOException
+      {
+         try
+         {
+            super.close();
+         }
+         finally
+         {
+            if (file != null)
+            {
+               System.out.println("!!!!!!!!!!! DeleteFileOnCloseInputStream -- deleting.. " + file);
+               file.delete();
+               file = null;
+            }
+         }
+      }
+
+   }
 }

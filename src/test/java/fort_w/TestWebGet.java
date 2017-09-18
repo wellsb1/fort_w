@@ -54,6 +54,7 @@ public class TestWebGet
    {
       FutureResponse fr = Web.get("http://google.com");
       Response response = fr.get();
+      response.getContent();
       Assert.assertEquals("Response should be a 200", 200, response.getCode());
    }
 
@@ -66,6 +67,7 @@ public class TestWebGet
             @Override
             public void onResponse(Response response) throws Exception
             {
+               response.getContent();
                Assert.assertEquals("Response should be a 200", 200, response.getCode());
             }
          });
@@ -239,6 +241,37 @@ public class TestWebGet
 
       Assert.assertEquals("Response should be a 206", 206, response.getCode());
       Assert.assertEquals("Content range size should equal file length", response.getContentRangeSize(), response.getFileLength());
+   }
+
+   @Test
+   public void testWebGetNoConnection() throws IOException
+   {
+      ToxiproxyClient client = new ToxiproxyClient();
+
+      // Delete all existing proxy configs
+      List<Proxy> proxies = client.getProxies();
+      for (Proxy p : proxies)
+      {
+         p.delete();
+      }
+
+      // Create new Toxiproxy 
+      final Proxy proxy = client.createProxy("webget", "localhost:21212", "s3.amazonaws.com:80");
+
+      // slow the connection down
+      proxy.toxics().bandwidth("bandwidth-10", ToxicDirection.DOWNSTREAM, 50);
+
+      // disable the proxy right away and leave it disabled
+      proxy.disable();
+
+      String url = "http://localhost:21212/files.liftck.com/test/large-01.jpg";
+
+      FutureResponse fr = Web.get(url);
+      Response response = fr.get();
+
+      Assert.assertTrue("Response should be not be a 200", response.getCode() != 200);
+      Assert.assertNotNull("Response error should not be null", response.getError());
+
    }
 
    static void _disableProxyAfter(final Proxy proxy, long delay)
