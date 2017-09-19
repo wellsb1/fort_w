@@ -291,7 +291,7 @@ public class Web
                   }
 
                   // If this is a retryable response, submit it later
-                  // Since we resetRetryCount upon any successful response, we are still guarding against a crazy large amount of retriesÏ with the TOTAL_MAX_RETRY_ATTEMPTS
+                  // Since we resetRetryCount upon any successful response, we are still guarding against a crazy large amount of retries with the TOTAL_MAX_RETRY_ATTEMPTS
                   if (retryable && this.getRetryCount() < request.getRetryAttempts() && !response.isSuccess() && this.getTotalRetries() < TOTAL_MAX_RETRY_ATTEMPTS)
                   {
                      this.incrementRetryCount();
