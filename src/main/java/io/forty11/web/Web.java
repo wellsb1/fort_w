@@ -82,7 +82,6 @@ public class Web
    static final int     QUEUE_MAX                = 500;
    static final int     DEFAULT_RETRY_ATTEMPTS   = 5;
    static final int     TOTAL_MAX_RETRY_ATTEMPTS = 50;
-   static final boolean DEBUG                    = true;
 
    static Executor      pool                     = null;
    static Timer         timer                    = null;
@@ -408,9 +407,9 @@ public class Web
 
    private static void debug(Object obj)
    {
-      if (DEBUG)
+      if (log.isDebugEnabled())
       {
-         System.out.println(obj);
+         log.debug(obj);
       }
    }
 
