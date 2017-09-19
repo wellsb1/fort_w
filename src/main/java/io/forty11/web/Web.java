@@ -18,9 +18,9 @@
 package io.forty11.web;
 
 import java.io.BufferedInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,6 +30,8 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.TimeUnit;
@@ -38,6 +40,8 @@ import java.util.concurrent.TimeoutException;
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -71,60 +75,82 @@ import io.forty11.utils.Executor;
  */
 public class Web
 {
-   static final int POOL_MIN  = 2;
-   static final int POOL_MAX  = 100;
-   static final int QUEUE_MAX = 500;
+   static Log           log                      = LogFactory.getLog(Web.class);
 
-   static Executor  pool      = null;
+   static final int     POOL_MIN                 = 2;
+   static final int     POOL_MAX                 = 100;
+   static final int     QUEUE_MAX                = 500;
+   static final int     DEFAULT_RETRY_ATTEMPTS   = 5;
+   static final int     TOTAL_MAX_RETRY_ATTEMPTS = 50;
+   static final boolean DEBUG                    = true;
+
+   static Executor      pool                     = null;
+   static Timer         timer                    = null;
 
    public static FutureResponse get(String url)
    {
-      return rest("GET", url, null, null);
+      return rest(new Request("GET", url));
    }
 
    public static FutureResponse get(String url, List<String> headers)
    {
-      return rest("GET", url, null, headers);
+      return rest(new Request("GET", url, null, headers));
    }
 
-   public static FutureResponse put(String url, String json)
+   public static FutureResponse get(String url, List<String> headers, int retryAttempts)
    {
-      return rest("PUT", url, json, null);
+      return rest(new Request("GET", url, null, headers, retryAttempts));
+   }
+
+   public static FutureResponse get(String url, int retryAttempts)
+   {
+      return rest(new Request("GET", url, null, null, retryAttempts));
+   }
+
+   public static FutureResponse put(String url, String body)
+   {
+      return rest(new Request("PUT", url, body, null));
    }
 
    public static FutureResponse put(String url, String body, List<String> headers)
    {
-      return rest("PUT", url, body, headers);
+      return rest(new Request("PUT", url, body, headers));
    }
 
    public static FutureResponse post(String url, String body)
    {
-      return rest("POST", url, body, null);
+      return rest(new Request("POST", url, body, null));
    }
 
    public static FutureResponse post(String url, String body, List<String> headers)
    {
-      return rest("POST", url, body, headers);
+      return rest(new Request("POST", url, body, headers));
    }
 
    public static FutureResponse delete(String url)
    {
-      return rest("DELETE", url, null, null);
+      return rest(new Request("DELETE", url));
    }
 
    public static FutureResponse delete(String url, List<String> headers)
    {
-      return rest("DELETE", url, null, headers);
+      return rest(new Request("DELETE", url, null, headers));
    }
 
-   public static FutureResponse rest(final String m, final String url, final String body, final List<String> headers)
+   public static FutureResponse rest(final Request request)
    {
       final FutureResponse future = new FutureResponse()
          {
             public void run()
             {
+               String m = request.getMethod();
+               String url = request.getUrl();
+               List<String> headers = request.getHeaders();
+               boolean retryable = true;
+
                Response response = new Response(url);
                HttpRequestBase req = null;
+               File tempFile = null;
 
                try
                {
@@ -147,6 +173,21 @@ public class Web
                   else if ("get".equalsIgnoreCase(m))
                   {
                      req = new HttpGet(url);
+
+                     if (this.getRetryFile() != null && this.getRetryFile().length() > 0)
+                     {
+                        if (headers == null)
+                        {
+                           headers = new ArrayList<String>();
+                        }
+
+                        // Add Range header for resumable download
+                        long range = this.getRetryFile().length();
+                        headers.add("Range");
+                        headers.add("bytes=" + range + "-");
+
+                        debug("RANGE REQUEST HEADER ** " + range);
+                     }
                   }
                   else if ("delete".equalsIgnoreCase(m))
                   {
@@ -158,11 +199,11 @@ public class Web
                      req.setHeader(headers.get(i), headers.get(i + 1));
                      response.log += "\r\n" + headers.get(i) + ": " + headers.get(i + 1);
                   }
-                  if (body != null && req instanceof HttpEntityEnclosingRequestBase)
+                  if (request.getBody() != null && req instanceof HttpEntityEnclosingRequestBase)
                   {
                      response.log += "\r\n--request body--------";
                      //response.log += "\r\n" + json;
-                     ((HttpEntityEnclosingRequestBase) req).setEntity(new StringEntity(body));
+                     ((HttpEntityEnclosingRequestBase) req).setEntity(new StringEntity(request.getBody()));
                   }
 
                   RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(timeout).setConnectTimeout(timeout).setConnectionRequestTimeout(timeout).build();
@@ -179,35 +220,61 @@ public class Web
                   response.log += "\r\n" + "status: " + response.status;
                   for (Header header : hr.getAllHeaders())
                   {
-                     response.log += header.getName() + ": " + header.getValue();
+                     response.log += "\r\n" + header.getName() + ": " + header.getValue();
                      response.headers.put(header.getName(), header.getValue());
                   }
 
-                  //String rbody = J.read(e.getContent());
-                  //r.body = rbody;
+                  debug("RESPONSE CODE ** " + response.code + "   (" + response.status + ")");
+                  debug("CONTENT RANGE RESPONSE HEADER ** " + response.getHeader("Content-Range"));
 
                   InputStream is = e.getContent();
 
+                  // We had a successful response, so let's reset the retry count to give the best chance of success
+                  if (response.code >= 200 && response.code <= 300)
+                  {
+                     debug("Resetting retry count");
+                     this.resetRetryCount();
+                  }
+
                   Url u = new Url(url);
                   String fileName = u.getFile();
-                  File tempFile = J.createTempFile(fileName);
-                  try
+
+                  // if we have a retry file and it's length matches the Content-Range header's start and the Content-Range header's unit's are bytes use the existing file
+                  if (this.getRetryFile() != null && this.getRetryFile().length() == response.getContentRangeStart() && "bytes".equalsIgnoreCase(response.getContentRangeUnit()))
                   {
-                     Streams.pipe(is, new FileOutputStream(tempFile));
+                     tempFile = this.getRetryFile();
+                     debug("## Using existing file .. " + tempFile);
                   }
-                  catch (IOException ex)
+                  else if (response.code == 206)
                   {
-                     tempFile.delete();
-                     throw ex;
+                     // status code is 206 Partial Content, but we don't want to use the existing file for some reason, so abort this and force it to fail
+                     retryable = false; // do not allow this to retry
+                     throw new Exception("Partial content without valid values, aborting this request");
+                  }
+                  else
+                  {
+                     tempFile = J.createTempFile(fileName);
+                     tempFile.deleteOnExit();
+                     debug("## Creating temp file .. " + tempFile);
                   }
 
                   response.setFile(tempFile);
+
+                  // stream to the temp file with append set to true (this is crucial for resumable downloads)
+                  Streams.pipe(is, new FileOutputStream(tempFile, true));
+
+                  if (response.getContentRangeSize() > 0 && tempFile.length() > response.getContentRangeSize())
+                  {
+                     // Something is wrong.. The server is saying the file should be X, but the actual file is larger than X, abort this
+                     retryable = false; // do not allow this to retry
+                     throw new Exception("Downloaded file is larger than the server says it should be, aborting this request");
+                  }
 
                }
                catch (Exception ex)
                {
                   response.error = ex;
-                  response.file = null;
+                  log.info("Exception in rest call. " + url, ex);
                }
                finally
                {
@@ -219,8 +286,44 @@ public class Web
                      }
                      catch (Exception ex)
                      {
-                        ex.printStackTrace();
+                        log.info("Exception trying to release the request connection", ex);
                      }
+                  }
+
+                  // If this is a retryable response, submit it later
+                  // Since we resetRetryCount upon any successful response, we are still guarding against a crazy large amount of retriesÏ with the TOTAL_MAX_RETRY_ATTEMPTS
+                  if (retryable && this.getRetryCount() < request.getRetryAttempts() && !response.isSuccess() && this.getTotalRetries() < TOTAL_MAX_RETRY_ATTEMPTS)
+                  {
+                     this.incrementRetryCount();
+
+                     long timeout = (1000 * this.getRetryCount() * this.getRetryCount()) + (int) (1000 * Math.random() * this.getRetryCount());
+
+                     debug("retrying: " + this.getRetryCount() + " - " + timeout + " - " + url);
+
+                     // Set this for possible resumable download on the next try
+                     if (this.getRetryFile() == null)
+                     {
+                        this.setRetryFile(response.file);
+                     }
+
+                     submitLater(this, timeout);
+                     return;
+                  }
+
+                  if (!response.isSuccess())
+                  {
+                     response.file = null;
+                     if (tempFile != null)
+                     {
+                        debug("Deleting temp file: " + tempFile);
+                        tempFile.delete();
+                     }
+
+                     if (response.getError() != null)
+                     {
+                        log.warn("Error in Web.rest() . " + m + " : " + url, response.getError());
+                     }
+
                   }
 
                   setResponse(response);
@@ -240,6 +343,24 @@ public class Web
          pool = new Executor(POOL_MIN, POOL_MAX, QUEUE_MAX);
 
       pool.submit(future);
+   }
+
+   static synchronized void submitLater(final FutureResponse future, long delay)
+   {
+      if (timer == null)
+      {
+         timer = new Timer();
+      }
+
+      timer.schedule(new TimerTask()
+         {
+            @Override
+            public void run()
+            {
+               submit(future);
+            }
+         }, delay);
+
    }
 
    /**
@@ -285,12 +406,103 @@ public class Web
       return client;
    }
 
+   private static void debug(Object obj)
+   {
+      if (DEBUG)
+      {
+         System.out.println(obj);
+      }
+   }
+
+   public static class Request
+   {
+      String       method;
+      String       url;
+      String       body;
+      List<String> headers;
+      int          retryAttempts;
+
+      public Request(String method, String url)
+      {
+         this(method, url, null, null);
+      }
+
+      public Request(String method, String url, String body, List<String> headers)
+      {
+         this(method, url, null, null, DEFAULT_RETRY_ATTEMPTS);
+      }
+
+      public Request(String method, String url, String body, List<String> headers, int retryAttempts)
+      {
+         super();
+         this.method = method;
+         this.url = url;
+         this.body = body;
+         this.headers = headers;
+         this.retryAttempts = retryAttempts;
+      }
+
+      public String getMethod()
+      {
+         return method;
+      }
+
+      public void setMethod(String method)
+      {
+         this.method = method;
+      }
+
+      public String getUrl()
+      {
+         return url;
+      }
+
+      public void setUrl(String url)
+      {
+         this.url = url;
+      }
+
+      public String getBody()
+      {
+         return body;
+      }
+
+      public void setBody(String body)
+      {
+         this.body = body;
+      }
+
+      public List<String> getHeaders()
+      {
+         return headers;
+      }
+
+      public void setHeaders(List<String> headers)
+      {
+         this.headers = headers;
+      }
+
+      public int getRetryAttempts()
+      {
+         return retryAttempts;
+      }
+
+      public void setRetryAttempts(int retryAttempts)
+      {
+         this.retryAttempts = retryAttempts;
+      }
+
+   }
+
    public static abstract class FutureResponse implements RunnableFuture<Response>
    {
-      Response              response   = null;
-      List<ResponseHandler> onSuccess  = new ArrayList();
-      List<ResponseHandler> onFailure  = new ArrayList();
-      List<ResponseHandler> onResponse = new ArrayList();
+      Response              response     = null;
+      List<ResponseHandler> onSuccess    = new ArrayList();
+      List<ResponseHandler> onFailure    = new ArrayList();
+      List<ResponseHandler> onResponse   = new ArrayList();
+      int                   retryCount   = 0;
+      File                  retryFile;
+      int                   totalRetries = 0;              // this number doesn't get reset and is the true measure of how many retries occured
 
       public FutureResponse onSuccess(ResponseHandler handler)
       {
@@ -312,7 +524,7 @@ public class Web
             }
             catch (Throwable ex)
             {
-               ex.printStackTrace();
+               log.error("Error handling onSuccess", ex);
             }
          }
 
@@ -339,7 +551,7 @@ public class Web
             }
             catch (Throwable ex)
             {
-               ex.printStackTrace();
+               log.error("Error handling onFailure", ex);
             }
          }
 
@@ -366,7 +578,7 @@ public class Web
             }
             catch (Throwable ex)
             {
-               ex.printStackTrace();
+               log.error("Error handling onResponse", ex);
             }
          }
 
@@ -389,7 +601,7 @@ public class Web
                   }
                   catch (Throwable ex)
                   {
-                     ex.printStackTrace();
+                     log.error("Error handling success callbacks in setResponse", ex);
                   }
                }
             }
@@ -403,7 +615,7 @@ public class Web
                   }
                   catch (Throwable ex)
                   {
-                     ex.printStackTrace();
+                     log.error("Error handling failure callbacks in setResponse", ex);
                   }
                }
             }
@@ -416,7 +628,7 @@ public class Web
                }
                catch (Throwable ex)
                {
-                  ex.printStackTrace();
+                  log.error("Error handling callbacks in setResponse", ex);
                }
             }
 
@@ -465,13 +677,21 @@ public class Web
       public Response get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException
       {
          timeout = unit.convert(timeout, TimeUnit.MILLISECONDS);
-         long start = System.currentTimeMillis();
-         while (!isDone())
+         while (response == null)
          {
-            long now = System.currentTimeMillis();
-            if (now - start >= timeout)
+            synchronized (this)
             {
-               J.sleep(250);
+               if (response == null)
+               {
+                  try
+                  {
+                     wait(timeout);
+                  }
+                  catch (Exception ex)
+                  {
+
+                  }
+               }
             }
          }
 
@@ -489,26 +709,64 @@ public class Web
       {
          return response != null;
       }
+
+      protected int getRetryCount()
+      {
+         return retryCount;
+      }
+
+      public void incrementRetryCount()
+      {
+         this.totalRetries++;
+         this.retryCount++;
+      }
+
+      public void resetRetryCount()
+      {
+         this.retryCount = 0;
+      }
+
+      public int getTotalRetries()
+      {
+         return totalRetries;
+      }
+
+      public File getRetryFile()
+      {
+         return retryFile;
+      }
+
+      public void setRetryFile(File retryFile)
+      {
+         this.retryFile = retryFile;
+      }
+
    }
 
-   static interface ResponseHandler
+   public static interface ResponseHandler
    {
       public void onResponse(Response response) throws Exception;
    }
 
    public static class Response
    {
-      String                               url      = null;
-      String                               fileName = null;
-      File                                 file     = null;
-      long                                 length   = -1;
-      String                               type     = null;
-      public int                           code     = 0;
-      public String                        status   = "";
-      public Exception                     error    = null;
-      public String                        log      = "";
+      static Log                           logger            = LogFactory.getLog(Response.class);
 
-      public LinkedHashMap<String, String> headers  = new LinkedHashMap();
+      String                               url               = null;
+      String                               fileName          = null;
+      File                                 file              = null;
+      String                               type              = null;
+      public int                           code              = 0;
+      public String                        status            = "";
+      public Exception                     error             = null;
+      public String                        log               = "";
+
+      String                               contentRangeUnit  = null;
+      long                                 contentRangeStart = -1;
+      long                                 contentRangeEnd   = -1;
+      long                                 contentRangeSize  = -1;
+
+      public LinkedHashMap<String, String> headers           = new LinkedHashMap();
 
       Response(String url)
       {
@@ -562,7 +820,7 @@ public class Web
       public InputStream getInputStream() throws IOException
       {
          if (file != null)
-            return new BufferedInputStream(new FileInputStream(file));
+            return new BufferedInputStream(new DeleteFileOnCloseInputStream(file));
 
          return null;
       }
@@ -571,9 +829,9 @@ public class Web
       {
          try
          {
-            if(file != null && file.length() > 0)
+            if (file != null && file.length() > 0)
             {
-               String string = J.read(file);
+               String string = J.read(getInputStream());
                return string;
             }
          }
@@ -584,19 +842,101 @@ public class Web
          return null;
       }
 
+      public long getFileLength()
+      {
+         if (file != null)
+         {
+            return file.length();
+         }
+         return -1;
+      }
+
       public void setFile(File file) throws Exception
       {
          this.file = file;
       }
 
-      public long getLength()
+      /**
+       * This is the value returned from the server via the "Content-Length" header
+       * NOTE: this will not match file length, for partial downloads, consider also using ContentRangeSize
+       * @return
+       */
+      public long getContentLength()
       {
-         return length;
+         if (headers != null && headers.get("Content-Length") != null)
+         {
+            return Long.parseLong(headers.get("Content-Length"));
+         }
+         return 0;
       }
 
-      public void setLength(long length)
+      /**
+       * This value come from the "Content-Range" header and is the unit part
+       * Content-Range: <unit> <range-start>-<range-end>/<size>
+       * @return
+       */
+      public String getContentRangeUnit()
       {
-         this.length = length;
+         parseContentRange();
+         return contentRangeUnit;
+      }
+
+      /**
+       * This value come from the "Content-Range" header and is the first part
+       * Content-Range: <unit> <range-start>-<range-end>/<size>
+       * @return
+       */
+      public long getContentRangeStart()
+      {
+         parseContentRange();
+         return contentRangeStart;
+      }
+
+      /**
+       * This value come from the "Content-Range" header and is the middle part
+       * Content-Range: <unit> <range-start>-<range-end>/<size>
+       * @return
+       */
+      public long getContentRangeEnd()
+      {
+         parseContentRange();
+         return contentRangeEnd;
+      }
+
+      /**
+       * This value come from the "Content-Range" header and is the last part
+       * Content-Range: <unit> <range-start>-<range-end>/<size>
+       * @return
+       */
+      public long getContentRangeSize()
+      {
+         parseContentRange();
+         return contentRangeSize;
+      }
+
+      /**
+       * Parses the "Content-Range" header
+       * Content-Range: <unit> <range-start>-<range-end>/<size>
+       */
+      private void parseContentRange()
+      {
+         if (contentRangeUnit == null)
+         {
+            String range = headers.get("Content-Range");
+            if (range != null)
+            {
+               String[] parts = range.split(" ");
+               contentRangeUnit = parts[0];
+               parts = parts[1].split("/");
+               contentRangeSize = Long.parseLong(parts[1]);
+               parts = parts[0].split("-");
+               if (parts.length == 2)
+               {
+                  contentRangeStart = Long.parseLong(parts[0]);
+                  contentRangeEnd = Long.parseLong(parts[1]);
+               }
+            }
+         }
       }
 
       public void setUrl(String url)
@@ -639,7 +979,7 @@ public class Web
             }
             catch (Exception ex)
             {
-               ex.printStackTrace();
+               logger.error("Error handling onSuccess", ex);
             }
          }
          return this;
@@ -655,7 +995,7 @@ public class Web
             }
             catch (Exception ex)
             {
-               ex.printStackTrace();
+               logger.error("Error handling onFailure", ex);
             }
          }
          return this;
@@ -669,9 +1009,49 @@ public class Web
          }
          catch (Exception ex)
          {
-            ex.printStackTrace();
+            logger.error("Error handling onResponse", ex);
          }
          return this;
+      }
+
+      @Override
+      public String toString()
+      {
+         return "Response [url=" + url + ", type=" + type + ", code=" + code + ", status=" + status + "]";
+      }
+
+   }
+
+   /**
+    * Simple FileInputStream that will attempt to delete the file onf close of the inputstream
+    *
+    */
+   public static class DeleteFileOnCloseInputStream extends FileInputStream
+   {
+
+      private File file;
+
+      public DeleteFileOnCloseInputStream(File file) throws FileNotFoundException
+      {
+         super(file);
+         this.file = file;
+      }
+
+      @Override
+      public void close() throws IOException
+      {
+         try
+         {
+            super.close();
+         }
+         finally
+         {
+            if (file != null)
+            {
+               file.delete();
+               file = null;
+            }
+         }
       }
 
    }
