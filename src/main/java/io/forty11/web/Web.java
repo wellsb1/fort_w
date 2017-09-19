@@ -969,6 +969,11 @@ public class Web
          return fileName;
       }
 
+      public String getUrl()
+      {
+         return url;
+      }
+
       public Response onSuccess(ResponseHandler handler)
       {
          if (isSuccess())
