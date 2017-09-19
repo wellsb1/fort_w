@@ -276,6 +276,22 @@ public class TestWebGet
 
    }
 
+   @Test
+   public void testWebGet404NoRetryReset() throws IOException
+   {
+
+      String url = "http://google.com/blah/blah";
+
+      FutureResponse fr = Web.get(url, null, 3);
+      Response response = fr.get();
+
+      System.out.println(response);
+
+      Assert.assertTrue("Response should be 404", response.getCode() == 404);
+      Assert.assertTrue("Should not retry more than 3 times", fr.getTotalRetries() <= 3);
+
+   }
+
    static void _disableProxyAfter(final Proxy proxy, long delay)
    {
       Timer timer = new Timer();

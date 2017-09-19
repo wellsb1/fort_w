@@ -75,16 +75,17 @@ import io.forty11.utils.Executor;
  */
 public class Web
 {
-   static Log           log                    = LogFactory.getLog(Web.class);
+   static Log           log                      = LogFactory.getLog(Web.class);
 
-   static final int     POOL_MIN               = 2;
-   static final int     POOL_MAX               = 100;
-   static final int     QUEUE_MAX              = 500;
-   static final int     DEFAULT_RETRY_ATTEMPTS = 5;
-   static final boolean DEBUG                  = true;
+   static final int     POOL_MIN                 = 2;
+   static final int     POOL_MAX                 = 100;
+   static final int     QUEUE_MAX                = 500;
+   static final int     DEFAULT_RETRY_ATTEMPTS   = 5;
+   static final int     TOTAL_MAX_RETRY_ATTEMPTS = 50;
+   static final boolean DEBUG                    = true;
 
-   static Executor      pool                   = null;
-   static Timer         timer                  = null;
+   static Executor      pool                     = null;
+   static Timer         timer                    = null;
 
    public static FutureResponse get(String url)
    {
@@ -223,13 +224,17 @@ public class Web
                      response.headers.put(header.getName(), header.getValue());
                   }
 
+                  debug("RESPONSE CODE ** " + response.code + "   (" + response.status + ")");
                   debug("CONTENT RANGE RESPONSE HEADER ** " + response.getHeader("Content-Range"));
 
                   InputStream is = e.getContent();
 
                   // We had a successful response, so let's reset the retry count to give the best chance of success
-                  debug("Resetting retry count");
-                  this.resetRetryCount();
+                  if (response.code >= 200 && response.code <= 300)
+                  {
+                     debug("Resetting retry count");
+                     this.resetRetryCount();
+                  }
 
                   Url u = new Url(url);
                   String fileName = u.getFile();
@@ -286,11 +291,12 @@ public class Web
                   }
 
                   // If this is a retryable response, submit it later
-                  if (retryable && this.getRetryCount() < request.getRetryAttempts() && !response.isSuccess())
+                  // Since we resetRetryCount upon any successful response, we are still guarding against a crazy large amount of retriesÏ with the TOTAL_MAX_RETRY_ATTEMPTS
+                  if (retryable && this.getRetryCount() < request.getRetryAttempts() && !response.isSuccess() && this.getTotalRetries() < TOTAL_MAX_RETRY_ATTEMPTS)
                   {
                      this.incrementRetryCount();
 
-                     long timeout = (1000 * this.getRetryCount()) + (int) (1000 * Math.random() * this.getRetryCount());
+                     long timeout = (1000 * this.getRetryCount() * this.getRetryCount()) + (int) (1000 * Math.random() * this.getRetryCount());
 
                      debug("retrying: " + this.getRetryCount() + " - " + timeout + " - " + url);
 
