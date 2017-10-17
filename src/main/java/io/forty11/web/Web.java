@@ -429,7 +429,7 @@ public class Web
 
       public Request(String method, String url, String body, List<String> headers)
       {
-         this(method, url, null, null, DEFAULT_RETRY_ATTEMPTS);
+         this(method, url, body, headers, DEFAULT_RETRY_ATTEMPTS);
       }
 
       public Request(String method, String url, String body, List<String> headers, int retryAttempts)
