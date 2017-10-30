@@ -14,3 +14,4 @@
 * ``gradle install`` install this project's jar into a local maven repository for use by other projects
 * ``gradle build`` build and test the project.  *NOTE* this task will fail if you are not running the Toxiproxy application prior to starting the build.
 * ``gradle uploadArchives`` start the process of pushing a build into the Maven Repositiory.  Takes a few minutes to complete.  For a more detailed explanation as to how this works and it's setup, view the 'fort_j' project's README  
+* ~~``gradle closeAndReleaseRepository``~~ closes and releases the uploaded project into the Maven Repository.  This can be run after the 'uploadArchives' task to bypass manually releasing the artifact from the [Nexus OSSR site](https://oss.sonatype.org/).  Takes a few minutes to complete.
