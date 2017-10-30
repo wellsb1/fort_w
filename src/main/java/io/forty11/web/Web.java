@@ -39,6 +39,7 @@ import java.util.concurrent.TimeoutException;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
+import javax.swing.SwingUtilities;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -318,7 +319,7 @@ public class Web
                         tempFile.delete();
                      }
 
-                     if (response.getError() != null)
+                     if (response.getError() != null && !(response.getError() instanceof org.apache.http.conn.HttpHostConnectException))
                      {
                         log.warn("Error in Web.rest() . " + m + " : " + url, response.getError());
                      }
@@ -644,6 +645,14 @@ public class Web
       @Override
       public Response get()
       {
+         if(SwingUtilities.isEventDispatchThread())
+         {
+            String msg = "Blocking on the Swing thread. Your code is blocking the UI by calling FutureResponse.get() on the Swing event dispatch thread.  You should consider moving your call into a background thread.";
+            Exception ex = new Exception();
+            ex.fillInStackTrace();
+            log.warn(msg, ex);
+         }
+         
          while (response == null)
          {
             synchronized (this)
@@ -675,6 +684,14 @@ public class Web
 
       public Response get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException
       {
+         if(SwingUtilities.isEventDispatchThread())
+         {
+            String msg = "Blocking on the Swing thread. Your code is blocking the UI by calling FutureResponse.get() on the Swing event dispatch thread.  You should consider moving your call into a background thread.";
+            Exception ex = new Exception();
+            ex.fillInStackTrace();
+            log.warn(msg, ex);
+         }
+         
          timeout = unit.convert(timeout, TimeUnit.MILLISECONDS);
          while (response == null)
          {
