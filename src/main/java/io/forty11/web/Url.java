@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,11 +19,10 @@ import java.io.Serializable;
 
 public class Url implements Serializable
 {
-
    protected String protocol = "http";
    protected String host     = null;
    protected int    port     = 0;
-   protected String uri      = null;
+   protected String path     = null;
    protected String query    = null;
 
    public Url(String url)
@@ -73,14 +72,14 @@ public class Url implements Serializable
             if (url.length() == 0 || url.charAt(0) == '/')
             {
                //-- absolute path form parent
-               uri = url;
+               path = url;
             }
             else
             {
                //-- path relative to parent
                if (parent != null)
                {
-                  String parentUri = parent.uri;
+                  String parentUri = parent.path;
                   if (parentUri.charAt(parentUri.length() - 1) != '/')
                   {
                      if (parentUri.lastIndexOf('/') >= 0)
@@ -100,12 +99,12 @@ public class Url implements Serializable
                      url = url.substring(1, url.length());
                   }
 
-                  uri = parentUri + url;
+                  path = parentUri + url;
 
                }
                else
                {
-                  uri = url;
+                  path = url;
                }
             }
          }
@@ -148,20 +147,20 @@ public class Url implements Serializable
                }
             }
 
-            uri = rest;
+            path = rest;
          }
 
-         if (uri == null || uri.length() == 0)
+         if (path == null || path.length() == 0)
          {
-            uri = "/";
+            path = "/";
          }
-         else if (uri.charAt(0) != '/')
+         else if (path.charAt(0) != '/')
          {
-            uri = '/' + url;
+            path = '/' + url;
          }
-         while (uri.contains("//"))
+         while (path.contains("//"))
          {
-            uri = uri.replace("//", "/");
+            path = path.replace("//", "/");
          }
       }
       catch (Exception ex)
@@ -178,8 +177,8 @@ public class Url implements Serializable
       if (port > 0)
          url += ":" + port;
 
-      if (uri != null)
-         url += uri;
+      if (path != null)
+         url += path;
 
       if (query != null)
          url += "?" + query;
@@ -250,27 +249,27 @@ public class Url implements Serializable
       this.query = query;
    }
 
-   public String getUri()
+   public String getPath()
    {
-      return uri;
+      return path;
+   }
+
+   public void setPath(String path)
+   {
+      this.path = path;
    }
 
    public String getFile()
    {
-      if (uri != null && !uri.endsWith("/"))
+      if (path != null && !path.endsWith("/"))
       {
-         if (uri.lastIndexOf('/') > -1)
-            return uri.substring(uri.lastIndexOf('/') + 1, uri.length());
-         return uri;
+         if (path.lastIndexOf('/') > -1)
+            return path.substring(path.lastIndexOf('/') + 1, path.length());
+         return path;
 
       }
 
       return null;
-   }
-
-   public void setUri(String uri)
-   {
-      this.uri = uri;
    }
 
 }
