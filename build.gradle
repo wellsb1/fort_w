@@ -1,10 +1,14 @@
+/*
+plugins {
+	// Releasing to Maven Central from Gradle without dealing with Nexus UI by using 'gradle closeAndReleaseRepository'
+    id 'io.codearte.nexus-staging' version '0.11.0'
+}
+*/
+
 apply plugin: 'eclipse'
 apply plugin: 'java'
 apply plugin: 'maven'
-
-version = '0.0.1'
-group = 'wellsb1'
-
+apply plugin: 'signing'
 
 repositories { 
    mavenLocal()
@@ -23,7 +27,7 @@ dependencies {
     	compile findProject(":fort_j")
     }
     else {
-    	compile "wellsb1:forty11-j:0.0.1"
+    	compile "com.github.wellsb1:fort_j:0.0.1"
     }
     
 	compile group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.5'
@@ -32,7 +36,95 @@ dependencies {
 }
 
 
-jar {
-    baseName 'forty11-w'
+
+/*
+ ************************************************************
+ * Everything below this is necessary for pushing for Maven 
+ * Central
+ ************************************************************
+ */
+version = '0.0.1'
+group = 'com.github.wellsb1'
+
+
+if (JavaVersion.current().isJava8Compatible()) {
+    allprojects {
+      tasks.withType(Javadoc) {
+        options.addStringOption('Xdoclint:none', '-quiet')
+      }
+    }
+  }
+ 
+task javadocJar(type: Jar) {
+    classifier = 'javadoc'
+    from javadoc
 }
+
+task sourcesJar(type: Jar) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+artifacts {
+    archives jar, javadocJar, sourcesJar
+}
+
+signing {
+    sign configurations.archives
+}
+
+
+uploadArchives {
+  repositories {
+    mavenDeployer {
+      beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+
+      repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
+        authentication(userName: ossrhUsername, password: ossrhPassword)
+      }
+
+	
+      snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
+        authentication(userName: ossrhUsername, password: ossrhPassword)
+      }
+	
+      pom.project {
+        name 'FortW'
+        packaging 'jar'
+        // optionally artifactId can be defined here 
+        description 'Java Web Related Utilities.'
+        url 'https://github.com/wellsb1/fort_w'
+
+        scm {  
+          url 'http://github.com/wellsb1/fort_w/tree/master'
+          connection 'scm:git:git://github.com/wellsb1/fort_w.git'
+          developerConnection 'scm:git:ssh://git@github.com:wellsb1/fort_w.git'
+          
+        }
+
+        licenses {
+          license {
+            name 'The Apache License, Version 2.0'
+            url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+          }
+        }
+
+        developers {
+          developer {
+            id 'kfrankic'
+            //name ''
+            //email ''
+          }
+          developer {
+            id 'tcollins'
+          }
+          developer {
+            id 'wellsb1'
+          }
+        }
+      }
+    }
+  }
+}
+
 
