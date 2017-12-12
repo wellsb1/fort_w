@@ -703,9 +703,8 @@ public class Web
                   try
                   {
                      wait(timeout);
-                     // return because we hit the timeout and can't wait any longer 
-                     // (or we could throw an exception) response will most likely be null
-                     return response;
+                     if (response == null)
+                        throw new TimeoutException(timeout + " millisecond timeout reached");
                   }
                   catch (Exception ex)
                   {
