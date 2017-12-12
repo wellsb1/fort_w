@@ -26,8 +26,8 @@ dependencies {
     	compile "wellsb1:forty11-j:0.0.1"
     }
 	compile group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.5'
-	compile group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '2.9.2'
-	compile (group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.9.2') {
+	compile group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '2.6.7'
+	compile (group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.6.7') {
     		exclude group: 'com.fasterxml.jackson', module: 'jackson-annotations'
    	}
 	testCompile group: 'junit', name: 'junit', version: '4.10'
