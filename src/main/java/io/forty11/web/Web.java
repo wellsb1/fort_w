@@ -87,6 +87,7 @@ public class Web
    static Executor      pool                     = null;
    static Timer         timer                    = null;
 
+   
    public static FutureResponse get(String url)
    {
       return rest(new Request("GET", url));
@@ -692,7 +693,7 @@ public class Web
             log.warn(msg, ex);
          }
          
-         timeout = unit.convert(timeout, TimeUnit.MILLISECONDS);
+         timeout = TimeUnit.MILLISECONDS.convert(timeout, unit);
          while (response == null)
          {
             synchronized (this)
@@ -702,6 +703,9 @@ public class Web
                   try
                   {
                      wait(timeout);
+                     // return because we hit the timeout and can't wait any longer 
+                     // (or we could throw an exception) response will most likely be null
+                     return response;
                   }
                   catch (Exception ex)
                   {
