@@ -76,16 +76,16 @@ import io.forty11.utils.Executor;
  */
 public class Web
 {
-   static Log           log                      = LogFactory.getLog(Web.class);
+   static Log       log                      = LogFactory.getLog(Web.class);
 
-   static final int     POOL_MIN                 = 2;
-   static final int     POOL_MAX                 = 100;
-   static final int     QUEUE_MAX                = 500;
-   static final int     DEFAULT_RETRY_ATTEMPTS   = 5;
-   static final int     TOTAL_MAX_RETRY_ATTEMPTS = 50;
+   static final int POOL_MIN                 = 2;
+   static final int POOL_MAX                 = 100;
+   static final int QUEUE_MAX                = 500;
+   static final int DEFAULT_RETRY_ATTEMPTS   = 5;
+   static final int TOTAL_MAX_RETRY_ATTEMPTS = 50;
 
-   static Executor      pool                     = null;
-   static Timer         timer                    = null;
+   static Executor  pool                     = null;
+   static Timer     timer                    = null;
 
    public static FutureResponse get(String url)
    {
@@ -301,7 +301,7 @@ public class Web
                      debug("retrying: " + this.getRetryCount() + " - " + timeout + " - " + url);
 
                      // Set this for possible resumable download on the next try
-                     if (this.getRetryFile() == null)
+                     if (this.getRetryFile() == null && response.code == 200)
                      {
                         this.setRetryFile(response.file);
                      }
@@ -645,14 +645,14 @@ public class Web
       @Override
       public Response get()
       {
-         if(SwingUtilities.isEventDispatchThread())
+         if (SwingUtilities.isEventDispatchThread())
          {
             String msg = "Blocking on the Swing thread. Your code is blocking the UI by calling FutureResponse.get() on the Swing event dispatch thread.  You should consider moving your call into a background thread.";
             Exception ex = new Exception();
             ex.fillInStackTrace();
             log.warn(msg, ex);
          }
-         
+
          while (response == null)
          {
             synchronized (this)
@@ -684,15 +684,16 @@ public class Web
 
       public Response get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException
       {
-         if(SwingUtilities.isEventDispatchThread())
+         if (SwingUtilities.isEventDispatchThread())
          {
             String msg = "Blocking on the Swing thread. Your code is blocking the UI by calling FutureResponse.get() on the Swing event dispatch thread.  You should consider moving your call into a background thread.";
             Exception ex = new Exception();
             ex.fillInStackTrace();
             log.warn(msg, ex);
          }
-         
-         timeout = unit.convert(timeout, TimeUnit.MILLISECONDS);
+
+         timeout = TimeUnit.MILLISECONDS.convert(timeout, unit);
+
          while (response == null)
          {
             synchronized (this)
