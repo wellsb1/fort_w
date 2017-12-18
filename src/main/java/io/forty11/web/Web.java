@@ -302,7 +302,7 @@ public class Web
                      debug("retrying: " + this.getRetryCount() + " - " + timeout + " - " + url);
 
                      // Set this for possible resumable download on the next try
-                     if (this.getRetryFile() == null)
+                     if (this.getRetryFile() == null && response.code == 200)
                      {
                         this.setRetryFile(response.file);
                      }
