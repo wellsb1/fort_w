@@ -703,6 +703,8 @@ public class Web
                   try
                   {
                      wait(timeout);
+                     if (response == null)
+                        throw new TimeoutException(timeout + " millisecond timeout reached");
                   }
                   catch (Exception ex)
                   {
