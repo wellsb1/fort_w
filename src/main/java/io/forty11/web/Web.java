@@ -240,7 +240,12 @@ public class Web
                   String fileName = u.getFile();
 
                   // if we have a retry file and it's length matches the Content-Range header's start and the Content-Range header's unit's are bytes use the existing file
-                  if (this.getRetryFile() != null && this.getRetryFile().length() == response.getContentRangeStart() && "bytes".equalsIgnoreCase(response.getContentRangeUnit()))
+                  if (response.code == 404)
+                  {
+                     retryable = false; // do not allow this to retry on a 404
+                     return; //will go to finally block
+                  }
+                  else if (this.getRetryFile() != null && this.getRetryFile().length() == response.getContentRangeStart() && "bytes".equalsIgnoreCase(response.getContentRangeUnit()))
                   {
                      tempFile = this.getRetryFile();
                      debug("## Using existing file .. " + tempFile);
@@ -309,26 +314,27 @@ public class Web
                      submitLater(this, timeout);
                      return;
                   }
-
-                  if (!response.isSuccess())
+                  else
                   {
-                     response.file = null;
-                     if (tempFile != null)
+                     if (!response.isSuccess())
                      {
-                        debug("Deleting temp file: " + tempFile);
-                        tempFile.delete();
+                        response.file = null;
+                        if (tempFile != null)
+                        {
+                           debug("Deleting temp file: " + tempFile);
+                           tempFile.delete();
+                        }
+
+                        if (response.getError() != null && !(response.getError() instanceof org.apache.http.conn.HttpHostConnectException))
+                        {
+                           log.warn("Error in Web.rest() . " + m + " : " + url, response.getError());
+                        }
+
                      }
 
-                     if (response.getError() != null && !(response.getError() instanceof org.apache.http.conn.HttpHostConnectException))
-                     {
-                        log.warn("Error in Web.rest() . " + m + " : " + url, response.getError());
-                     }
-
+                     setResponse(response);
                   }
-
-                  setResponse(response);
                }
-
             }
          };
 
