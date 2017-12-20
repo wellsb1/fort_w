@@ -693,23 +693,15 @@ public class Web
          }
 
          timeout = TimeUnit.MILLISECONDS.convert(timeout, unit);
-
          while (response == null)
          {
             synchronized (this)
             {
                if (response == null)
                {
-                  try
-                  {
-                     wait(timeout);
-                     if (response == null)
-                        throw new TimeoutException(timeout + " millisecond timeout reached");
-                  }
-                  catch (Exception ex)
-                  {
-
-                  }
+                  wait(timeout);
+                  if (response == null)
+                     throw new TimeoutException(timeout + " millisecond timeout reached");
                }
             }
          }

@@ -3,25 +3,6 @@
  */
 package fort_w;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
-
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
-import eu.rekawek.toxiproxy.Proxy;
-import eu.rekawek.toxiproxy.ToxiproxyClient;
-import eu.rekawek.toxiproxy.model.ToxicDirection;
-import io.forty11.web.Web;
-import io.forty11.web.Web.FutureResponse;
-import io.forty11.web.Web.Response;
-import io.forty11.web.Web.ResponseHandler;
-
 /**
  * @author tc-rocket
  *
