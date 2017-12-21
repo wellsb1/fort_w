@@ -279,7 +279,16 @@ public class Web
                catch (Exception ex)
                {
                   response.error = ex;
-                  log.info("Exception in rest call. " + url, ex);
+
+                  if (isNetworkException(ex))
+                  {
+                     log.debug("Network exception " + ex.getClass().getName() + " - " + ex.getMessage() + " - " + url);
+                  }
+                  else
+                  {
+                     log.warn("Exception in rest call. " + url, ex);
+                  }
+
                }
                finally
                {
@@ -325,7 +334,7 @@ public class Web
                            tempFile.delete();
                         }
 
-                        if (response.getError() != null && !(response.getError() instanceof org.apache.http.conn.HttpHostConnectException))
+                        if (response.getError() != null && !(isNetworkException(response.getError())))
                         {
                            log.warn("Error in Web.rest() . " + m + " : " + url, response.getError());
                         }
@@ -341,6 +350,13 @@ public class Web
       submit(future);
       return future;
 
+   }
+
+   public static boolean isNetworkException(Exception ex)
+   {
+      return ex instanceof org.apache.http.conn.HttpHostConnectException //
+            || ex instanceof java.net.ConnectException //
+            || ex instanceof java.net.SocketTimeoutException;
    }
 
    static synchronized void submit(FutureResponse future)
