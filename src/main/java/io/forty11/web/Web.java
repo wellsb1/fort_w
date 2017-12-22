@@ -126,6 +126,11 @@ public class Web
    {
       return rest(new Request("POST", url, body, headers));
    }
+   
+   public static FutureResponse post(String url, String body, List<String> headers, int retryAttempts)
+   {
+      return rest(new Request("POST", url, body, headers, retryAttempts));
+   }
 
    public static FutureResponse delete(String url)
    {
