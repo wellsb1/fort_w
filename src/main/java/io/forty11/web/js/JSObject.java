@@ -77,6 +77,12 @@ public class JSObject
       return prop;
    }
 
+   public void putAll(Map<String, Object> nvpairs)
+   {
+      for (String name : nvpairs.keySet())
+         put(name, nvpairs.get(name));
+   }
+
    public boolean hasProperty(String name)
    {
       return properties.containsKey(name);
