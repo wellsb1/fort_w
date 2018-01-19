@@ -43,6 +43,12 @@ public class JSArray extends JSObject
       return (JSObject) get(i);
    }
 
+   public void setObject(int index, Object o)
+   {
+      objects.set(index, o);
+   }
+   
+   
    public JSArray getArray(int i)
    {
       return (JSArray) get(i);

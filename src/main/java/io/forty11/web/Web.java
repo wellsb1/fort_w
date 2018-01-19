@@ -126,7 +126,7 @@ public class Web
    {
       return rest(new Request("POST", url, body, headers));
    }
-   
+
    public static FutureResponse post(String url, String body, List<String> headers, int retryAttempts)
    {
       return rest(new Request("POST", url, body, headers, retryAttempts));
@@ -360,6 +360,7 @@ public class Web
    public static boolean isNetworkException(Exception ex)
    {
       return ex instanceof org.apache.http.conn.HttpHostConnectException //
+            || ex instanceof org.apache.http.conn.ConnectTimeoutException //
             || ex instanceof java.net.ConnectException //
             || ex instanceof java.net.SocketTimeoutException;
    }
