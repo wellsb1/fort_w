@@ -349,7 +349,6 @@ public class Web
 
                         if (response.getError() != null && !(isNetworkException(response.getError())))
                         {
-                           if (response.)
                            log.warn("Error in Web.rest() . " + m + " : " + url, response.getError());
                         }
 
