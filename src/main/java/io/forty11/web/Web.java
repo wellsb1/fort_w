@@ -292,14 +292,7 @@ public class Web
                   }
                   else
                   {
-                     if (response.getCode() != 504 && !(response.getError() instanceof SocketTimeoutException))
-                     {
-                        log.warn(response.getCode() + " Exception in rest call: URL=" + url, ex);
-                     }
-                     else
-                     {
-                        log.debug("504 error or socket timeout exception from Web.rest() at URL: " + url, ex);
-                     }
+                     log.warn(ex.getClass().getName() + " exception in rest call to URL: " + url, ex);
                   }
 
                }
