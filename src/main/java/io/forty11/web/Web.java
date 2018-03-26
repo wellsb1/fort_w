@@ -24,6 +24,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
@@ -291,7 +292,7 @@ public class Web
                   }
                   else
                   {
-                     log.warn("Exception in rest call. " + url, ex);
+                     log.warn(ex.getClass().getName() + " exception in rest call to URL: " + url, ex);
                   }
 
                }
@@ -341,7 +342,7 @@ public class Web
 
                         if (response.getError() != null && !(isNetworkException(response.getError())))
                         {
-                           log.warn("Error in Web.rest() . " + m + " : " + url, response.getError());
+                           log.warn(response.getError().getClass().getName() + " exception in Web.rest() . " + m + " : " + url, response.getError());
                         }
 
                      }
