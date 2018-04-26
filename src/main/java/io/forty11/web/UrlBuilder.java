@@ -2,17 +2,18 @@ package io.forty11.web;
 
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
 import io.forty11.j.J;
-import io.forty11.web.Url;
 
 public class UrlBuilder
 {
 
    String       protocol = null;
    String       host     = null;
-   String       port     = null;
+   Integer      port     = null;
    String       path     = null;
 
    List<NVPair> query    = new ArrayList();
@@ -22,9 +23,35 @@ public class UrlBuilder
 
    }
 
+   public UrlBuilder(String protocol, String host, Integer port, String path, Object... params)
+   {
+      this.protocol = protocol;
+      this.host = host;
+      this.port = port;
+      this.path = path;
+
+      List plist = null;
+      if (params != null)
+      {
+         plist = Arrays.asList(params);
+         if (plist.size() > 0 && plist.get(0) instanceof Collection)
+         {
+            plist = new ArrayList((Collection) plist.get(0));
+         }
+      }
+
+      for (int i = 0; plist != null && i < plist.size(); i += 2)
+      {
+         query.add(new NVPair(plist.get(i) + "", plist.get(i + 1) == null ? null : (plist.get(i + 1) + "")));
+      }
+   }
+
    public UrlBuilder(Url url)
    {
-
+      protocol = url.getProtocol();
+      host = url.getHost();
+      port = url.getPort();
+      path = url.getPath();
    }
 
    public String getHost()
@@ -39,12 +66,12 @@ public class UrlBuilder
       return this;
    }
 
-   public String getPort()
+   public Integer getPort()
    {
       return port;
    }
 
-   public UrlBuilder withPort(String port)
+   public UrlBuilder withPort(Integer port)
    {
       this.port = port;
       return this;
@@ -123,7 +150,7 @@ public class UrlBuilder
       return new Url(url);
    }
 
-   class NVPair
+   public class NVPair
    {
       String name  = null;
       String value = null;
