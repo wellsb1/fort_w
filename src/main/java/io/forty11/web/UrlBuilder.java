@@ -79,7 +79,7 @@ public class UrlBuilder
    {
       try
       {
-         query.add(new NVPair(URLEncoder.encode(name, "UTF-8"), URLEncoder.encode(value, "UTF-8")));
+         query.add(new NVPair(URLEncoder.encode(name, "UTF-8"), value != null ? URLEncoder.encode(value, "UTF-8") : null));
       }
       catch (Exception ex)
       {
