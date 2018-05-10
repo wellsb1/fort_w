@@ -78,6 +78,8 @@ public class Web
 {
    static Log       log                      = LogFactory.getLog(Web.class);
 
+   static final int DEFAULT_TIMEOUT          = 30000;
+
    static final int POOL_MIN                 = 2;
    static final int POOL_MAX                 = 100;
    static final int QUEUE_MAX                = 500;
@@ -426,6 +428,9 @@ public class Web
       //      -- allows multi-threaded use
       PoolingHttpClientConnectionManager connMgr = new PoolingHttpClientConnectionManager(RegistryBuilder.<ConnectionSocketFactory> create().register("http", PlainConnectionSocketFactory.getSocketFactory()).register("https", sslSocketFactory).build());
       b.setConnectionManager(connMgr);
+
+      RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(DEFAULT_TIMEOUT).setConnectTimeout(DEFAULT_TIMEOUT).setConnectionRequestTimeout(DEFAULT_TIMEOUT).build();
+      b.setDefaultRequestConfig(requestConfig);
 
       // finally, build the HttpClient;
       //      -- done!

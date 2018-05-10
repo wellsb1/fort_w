@@ -2,7 +2,7 @@ apply plugin: 'eclipse'
 apply plugin: 'java'
 apply plugin: 'maven'
 
-version = '0.1.5'
+version = '0.1.6'
 group = 'wellsb1'
 
 

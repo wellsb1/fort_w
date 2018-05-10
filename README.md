@@ -18,6 +18,9 @@
 
 ### Change Log
 
+5/09/18 - 0.1.6
+ 
+ * Added default 30s timeout HttpClients build via Web.getHttpClient()
 
 04/26/18 - 0.1.5
 
