@@ -141,10 +141,10 @@ public class UrlBuilder
             url += "?";
 
          NVPair pair = query.get(i);
-         if (pair.value != null)
-            url += pair.name + "=" + pair.value;
-         else
+         if (pair.value == null)
             url += pair.name;
+         else
+            url += pair.name + "=" + pair.value;
 
          if (i < query.size() - 1)
             url += "&";
