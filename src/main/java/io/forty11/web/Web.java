@@ -65,7 +65,6 @@ import org.apache.http.ssl.SSLContextBuilder;
 import org.apache.http.ssl.TrustStrategy;
 
 import io.forty11.j.J;
-import io.forty11.j.api.Lang;
 import io.forty11.j.api.Streams;
 import io.forty11.utils.Executor;
 
@@ -991,7 +990,7 @@ public class Web
 
       public void setUrl(String url)
       {
-         if (!Lang.empty(url))
+         if (!J.empty(url))
          {
             url = url.trim();
             url = url.replaceAll(" ", "%20");
@@ -999,12 +998,12 @@ public class Web
 
          this.url = url;
 
-         if (Lang.empty(fileName))
+         if (J.empty(fileName))
          {
             try
             {
                fileName = new URL(url).getFile();
-               if (Lang.empty(fileName))
+               if (J.empty(fileName))
                   fileName = null;
             }
             catch (Exception ex)
