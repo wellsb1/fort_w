@@ -267,7 +267,8 @@ public class Web
                   {
                      if (fileName.length() < 3)
                      {
-                        fileName += fileName;
+                        // if fileName is only 2 characters long, createTempFile will blow up
+                        fileName += "_ext";
                      }
                      
                      tempFile = J.createTempFile(fileName);
