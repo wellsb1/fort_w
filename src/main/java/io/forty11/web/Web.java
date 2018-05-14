@@ -265,6 +265,12 @@ public class Web
                   }
                   else
                   {
+                     if (fileName.length() < 3)
+                     {
+                        // if fileName is only 2 characters long, createTempFile will blow up
+                        fileName += "_ext";
+                     }
+                     
                      tempFile = J.createTempFile(fileName);
                      tempFile.deleteOnExit();
                      debug("## Creating temp file .. " + tempFile);
