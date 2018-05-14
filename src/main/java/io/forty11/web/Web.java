@@ -265,6 +265,11 @@ public class Web
                   }
                   else
                   {
+                     if (fileName.length() < 3)
+                     {
+                        fileName += fileName;
+                     }
+                     
                      tempFile = J.createTempFile(fileName);
                      tempFile.deleteOnExit();
                      debug("## Creating temp file .. " + tempFile);
