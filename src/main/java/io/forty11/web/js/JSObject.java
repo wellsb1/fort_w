@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -117,12 +118,12 @@ public class JSObject
 
    public Set<String> keys()
    {
-      return properties.keySet();
+      return new LinkedHashSet(properties.keySet());
    }
 
    public Set<String> keySet()
    {
-      return properties.keySet();
+      return new LinkedHashSet(properties.keySet());
    }
 
    public Property getProperty(String name)

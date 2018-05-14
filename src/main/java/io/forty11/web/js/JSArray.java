@@ -9,6 +9,8 @@ import java.util.List;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 
+import io.forty11.web.js.JSObject.Property;
+
 public class JSArray extends JSObject
 {
    List objects = new ArrayList();
@@ -28,35 +30,64 @@ public class JSArray extends JSObject
          add(objects[i]);
    }
 
+   public Object get(int index)
+   {
+      return objects.get(index);
+   }
+
+   public Object get(String index)
+   {
+      return get(Integer.parseInt(index.trim()));
+   }
+
+   public Object set(int index, Object o)
+   {
+      return objects.set(index, o);
+   }
+
+   public Object put(String index, Object value)
+   {
+      return set(Integer.parseInt(index.trim()), value);
+   }
+
+   public Object put(int index, Object value)
+   {
+      return set(index, value);
+   }
+
+   public Object remove(int index)
+   {
+      return objects.remove(index);
+   }
+
+   public Object remove(String index)
+   {
+      return remove(Integer.parseInt(index.trim()));
+   }
+
    public void add(Object object)
    {
       objects.add(object);
    }
 
-   public String getString(int i)
+   public String getString(int index)
    {
-      return (String) get(i);
+      return (String) get(index);
    }
 
-   public JSObject getObject(int i)
+   public JSObject getObject(int index)
    {
-      return (JSObject) get(i);
+      return (JSObject) get(index);
    }
 
    public void setObject(int index, Object o)
    {
       objects.set(index, o);
    }
-   
-   
-   public JSArray getArray(int i)
-   {
-      return (JSArray) get(i);
-   }
 
-   public Object get(int i)
+   public JSArray getArray(int index)
    {
-      return objects.get(i);
+      return (JSArray) get(index);
    }
 
    public boolean contains(Object object)
