@@ -143,6 +143,11 @@ public class Web
       return rest(new Request("DELETE", url, null, headers));
    }
 
+   public static FutureResponse delete(String url, String body, List<String> headers)
+   {
+      return rest(new Request("DELETE", url, body, headers));
+   }
+
    public static FutureResponse rest(final Request request)
    {
       final FutureResponse future = new FutureResponse()
@@ -269,7 +274,7 @@ public class Web
                         // if fileName is only 2 characters long, createTempFile will blow up
                         fileName += "_ext";
                      }
-                     
+
                      tempFile = J.createTempFile(fileName);
                      tempFile.deleteOnExit();
                      debug("## Creating temp file .. " + tempFile);

@@ -2,9 +2,8 @@ apply plugin: 'eclipse'
 apply plugin: 'java'
 apply plugin: 'maven'
 
+version = '0.1.10'
 
-version = '0.1.9'
-group = 'wellsb1'
 
 
 repositories { 
