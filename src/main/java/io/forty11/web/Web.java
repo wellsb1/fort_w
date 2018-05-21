@@ -24,6 +24,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.net.URL;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
@@ -202,7 +203,14 @@ public class Web
                   }
                   else if ("delete".equalsIgnoreCase(m))
                   {
-                     req = new HttpDelete(url);
+                     if (request.getBody() != null)
+                     {
+                        req = new HttpDeleteWithBody(url);
+                     }
+                     else
+                     {
+                        req = new HttpDelete(url);
+                     }
                   }
 
                   for (int i = 0; headers != null && i < headers.size() - 1; i += 2)
@@ -1113,5 +1121,23 @@ public class Web
          }
       }
 
+   }
+
+   public static class HttpDeleteWithBody extends HttpEntityEnclosingRequestBase
+   {
+
+      static final String methodName = "DELETE";
+
+      @Override
+      public String getMethod()
+      {
+         return methodName;
+      }
+
+      public HttpDeleteWithBody(final String url)
+      {
+         super();
+         setURI(URI.create(url));
+      }
    }
 }
