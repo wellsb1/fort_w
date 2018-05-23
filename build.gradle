@@ -5,26 +5,18 @@ apply plugin: 'maven'
 version = '0.1.11'
 group = 'wellsb1'
 
-
 repositories { 
    mavenLocal()
    mavenCentral() 
+   maven { url 'https://jitpack.io' }
 }
 
-
-/********************************************************
- * by default, targetCompatibility == sourceCompatibility  
- */
 sourceCompatibility = 1.6
 
 dependencies {
 
-	if (gradle.ext.fortw['addFortJProjectToClasspath']) {
-    	compile findProject(":fort_j")
-    }
-    else {
-    	compile "wellsb1:forty11-j:0.0.4"
-    }
+	compile 'com.github.wellsb1:fort_j:master-SNAPSHOT'
+	       
 	compile group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.5.5'
 	compile group: 'org.apache.httpcomponents', name: 'httpmime', version: '4.5.5'
 	compile group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '2.6.7'
@@ -39,4 +31,6 @@ dependencies {
 jar {
     baseName 'forty11-w'
 }
+
+
 
