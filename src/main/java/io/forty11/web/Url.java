@@ -19,10 +19,11 @@ import java.io.Serializable;
 
 public class Url implements Serializable
 {
+
    protected String protocol = "http";
    protected String host     = null;
    protected int    port     = 0;
-   protected String path     = null;
+   protected String uri      = null;
    protected String query    = null;
 
    public Url(String url)
@@ -72,19 +73,19 @@ public class Url implements Serializable
             if (url.length() == 0 || url.charAt(0) == '/')
             {
                //-- absolute path form parent
-               path = url;
+               uri = url;
             }
             else
             {
                //-- path relative to parent
                if (parent != null)
                {
-                  String parentUri = parent.path;
+                  String parentUri = parent.uri;
                   if (parentUri.charAt(parentUri.length() - 1) != '/')
                   {
                      if (parentUri.lastIndexOf('/') >= 0)
                      {
-                        //chop off the file to make it path
+                        //chop off the file to make it path 
                         //realtive not file relative
                         parentUri = parentUri.substring(0, parentUri.lastIndexOf('/') + 1);
                      }
@@ -99,12 +100,12 @@ public class Url implements Serializable
                      url = url.substring(1, url.length());
                   }
 
-                  path = parentUri + url;
+                  uri = parentUri + url;
 
                }
                else
                {
-                  path = url;
+                  uri = url;
                }
             }
          }
@@ -147,20 +148,20 @@ public class Url implements Serializable
                }
             }
 
-            path = rest;
+            uri = rest;
          }
 
-         if (path == null || path.length() == 0)
+         if (uri == null || uri.length() == 0)
          {
-            path = "/";
+            uri = "/";
          }
-         else if (path.charAt(0) != '/')
+         else if (uri.charAt(0) != '/')
          {
-            path = '/' + url;
+            uri = '/' + url;
          }
-         while (path.contains("//"))
+         while (uri.contains("//"))
          {
-            path = path.replace("//", "/");
+            uri = uri.replace("//", "/");
          }
       }
       catch (Exception ex)
@@ -177,8 +178,8 @@ public class Url implements Serializable
       if (port > 0)
          url += ":" + port;
 
-      if (path != null)
-         url += path;
+      if (uri != null)
+         url += uri;
 
       if (query != null)
          url += "?" + query;
@@ -249,27 +250,27 @@ public class Url implements Serializable
       this.query = query;
    }
 
-   public String getPath()
+   public String getUri()
    {
-      return path;
-   }
-
-   public void setPath(String path)
-   {
-      this.path = path;
+      return uri;
    }
 
    public String getFile()
    {
-      if (path != null && !path.endsWith("/"))
+      if (uri != null && !uri.endsWith("/"))
       {
-         if (path.lastIndexOf('/') > -1)
-            return path.substring(path.lastIndexOf('/') + 1, path.length());
-         return path;
+         if (uri.lastIndexOf('/') > -1)
+            return uri.substring(uri.lastIndexOf('/') + 1, uri.length());
+         return uri;
 
       }
 
       return null;
+   }
+
+   public void setUri(String uri)
+   {
+      this.uri = uri;
    }
 
 }
