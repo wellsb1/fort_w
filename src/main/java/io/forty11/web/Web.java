@@ -381,8 +381,12 @@ public class Web
    {
       return ex instanceof org.apache.http.conn.HttpHostConnectException //
             || ex instanceof org.apache.http.conn.ConnectTimeoutException //
-            || ex instanceof java.net.ConnectException //
-            || ex instanceof java.net.SocketTimeoutException;
+            || ex.getClass().getName().startsWith("java.net")
+      //|| ex instanceof java.net.ConnectException //
+      //|| ex instanceof java.net.NoRouteToHostException //
+      //|| ex instanceof java.net.SocketTimeoutException //
+      //|| ex instanceof java.net.UnknownHostException //
+      ;
    }
 
    static synchronized void submit(FutureResponse future)
