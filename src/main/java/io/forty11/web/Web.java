@@ -381,6 +381,7 @@ public class Web
    {
       return ex instanceof org.apache.http.conn.HttpHostConnectException //
             || ex instanceof org.apache.http.conn.ConnectTimeoutException //
+            || ex instanceof org.apache.http.NoHttpResponseException //
             || ex.getClass().getName().startsWith("java.net")
       //|| ex instanceof java.net.ConnectException //
       //|| ex instanceof java.net.NoRouteToHostException //
