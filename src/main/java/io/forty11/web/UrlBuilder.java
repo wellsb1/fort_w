@@ -129,6 +129,11 @@ public class UrlBuilder
       return this;
    }
 
+   public String toString()
+   {
+      return toUrl().toString();
+   }
+   
    public Url toUrl()
    {
       String url = "";
