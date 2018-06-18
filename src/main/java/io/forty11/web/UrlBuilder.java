@@ -24,6 +24,19 @@ public class UrlBuilder
 
    }
 
+   public UrlBuilder(String url)
+   {
+      this(new Url(url));
+   }
+
+   public UrlBuilder(Url url)
+   {
+      protocol = url.getProtocol();
+      host = url.getHost();
+      port = url.getPort();
+      path = url.getPath();
+   }
+
    public UrlBuilder(String protocol, String host, Integer port, String path, Object... params)
    {
       this.protocol = protocol;
@@ -47,12 +60,9 @@ public class UrlBuilder
       }
    }
 
-   public UrlBuilder(Url url)
+   public String toString()
    {
-      protocol = url.getProtocol();
-      host = url.getHost();
-      port = url.getPort();
-      path = url.getPath();
+      return toUrl().toString();
    }
 
    public String getHost()
@@ -129,11 +139,6 @@ public class UrlBuilder
       return this;
    }
 
-   public String toString()
-   {
-      return toUrl().toString();
-   }
-   
    public Url toUrl()
    {
       String url = "";
