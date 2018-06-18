@@ -40,6 +40,16 @@ public class Url implements Serializable
       this(new Url(parent), url);
    }
 
+   public Url(String protocol, String host, int port, String path, String query)
+   {
+      super();
+      this.protocol = protocol;
+      this.host = host;
+      this.port = port;
+      this.path = path;
+      this.query = query;
+   }
+
    protected void parse(Url parent, String url)
    {
       if (url.indexOf(":/") > 0 && url.indexOf("://") < 0)
@@ -184,6 +194,14 @@ public class Url implements Serializable
          url += "?" + query;
 
       return url;
+   }
+
+   /**
+    * @return the url without any querystring
+    */
+   public Url getBase()
+   {
+      return new Url(this.protocol, this.host, this.port, this.path, null);
    }
 
    public boolean equals(Object obj)
