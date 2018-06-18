@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import io.forty11.j.J;
 
@@ -99,6 +100,19 @@ public class UrlBuilder
       if (!path.startsWith("/"))
          path += "/";
 
+      return this;
+   }
+
+   /**
+    * Parses queryString and adds the nvpairs to query.
+    */
+   public UrlBuilder withQuery(String queryString)
+   {
+      Map<String, String> params = Url.parseQuery(queryString);
+      for (String key : params.keySet())
+      {
+         query.add(new NVPair(key, params.get(key)));
+      }
       return this;
    }
 

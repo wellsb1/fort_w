@@ -16,9 +16,48 @@
 package io.forty11.web;
 
 import java.io.Serializable;
+import java.net.URLDecoder;
+import java.util.HashMap;
+import java.util.Map;
+
+import io.forty11.j.J;
 
 public class Url implements Serializable
 {
+   public static Map<String, String> parseQuery(String query)
+   {
+      try
+      {
+         while (query.startsWith("?"))
+         {
+            query = query.substring(1);
+         }
+
+         Map params = new HashMap();
+         String[] pairs = query.split("&");
+         for (String pair : pairs)
+         {
+            int idx = pair.indexOf("=");
+            if (idx > 0)
+            {
+               String key = URLDecoder.decode(pair.substring(0, idx), "UTF-8");
+               String value = URLDecoder.decode(pair.substring(idx + 1), "UTF-8");
+               params.put(key, value);
+            }
+            else
+            {
+               params.put(URLDecoder.decode(pair, "UTF-8"), "");
+            }
+         }
+         return params;
+      }
+      catch (Exception ex)
+      {
+         J.rethrow(ex);
+      }
+      return null;
+   }
+
    protected String protocol = "http";
    protected String host     = null;
    protected int    port     = 0;
