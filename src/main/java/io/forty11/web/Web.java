@@ -67,7 +67,7 @@ import org.apache.http.ssl.TrustStrategy;
 
 import io.forty11.j.J;
 import io.forty11.j.api.Streams;
-import io.forty11.utils.Executor;
+import io.forty11.j.utils.Executor;
 
 /**
  * 
