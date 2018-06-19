@@ -142,7 +142,7 @@ public class JSArray extends JSObject
          }
          else
          {
-            json.writeString(obj + "");
+            json.writeString(JS.encodeString(obj + ""));
          }
       }
       json.writeEndArray();

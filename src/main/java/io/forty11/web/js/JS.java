@@ -3,11 +3,14 @@ package io.forty11.web.js;
 import java.util.Iterator;
 
 import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.io.JsonStringEncoder;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class JS
 {
+   static final JsonStringEncoder jsonEncode = JsonStringEncoder.getInstance();
+
    public static JSArray toJSArray(String json)
    {
       return ((JSArray) parse(json));
@@ -21,6 +24,11 @@ public class JS
    public static Object toObject(String json)
    {
       return parse(json);
+   }
+
+   public static String encodeString(String string)
+   {
+      return new String(jsonEncode.encodeAsUTF8(string));
    }
 
    static Object parse(String js)

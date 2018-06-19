@@ -20,8 +20,6 @@ import io.forty11.j.J;
 
 public class JSObject
 {
-   //public static CharSequenceTranslator ESCAPE_JAVA = new LookupTranslator(new String[][]{{"\"", "\\\""}, {"\\", "\\\\"}, {",", "\\u002C"},}).with(new LookupTranslator(EntityArrays.JAVA_CTRL_CHARS_ESCAPE()));
-
    LinkedHashMap<String, Property>      properties  = new LinkedHashMap();
 
    public JSObject()
@@ -352,10 +350,7 @@ public class JSObject
             }
             else
             {
-               //strVal = ESCAPE_JAVA.translate(strVal);
-
-               JsonStringEncoder e = JsonStringEncoder.getInstance();
-               strVal = new String(e.encodeAsUTF8(strVal));
+               strVal = JS.encodeString(strVal);
                json.writeStringField(p.name, strVal);
             }
          }
