@@ -70,8 +70,6 @@ public class UrlBuilder
       return host;
    }
 
-
-
    public UrlBuilder withHost(String host)
    {
       host = host.replace("/", "");
@@ -120,9 +118,9 @@ public class UrlBuilder
       if (path == null)
          path = "/";
 
-      if(!path.startsWith("/"))
+      if (!path.startsWith("/"))
          path = "/" + path;
-      
+
       if (!path.endsWith("/"))
          path += "/";
 
@@ -136,8 +134,7 @@ public class UrlBuilder
 
       return this;
    }
-   
-   
+
    /**
     * Parses queryString and adds the nvpairs to query.
     */
@@ -166,40 +163,26 @@ public class UrlBuilder
 
    public Url toUrl()
    {
-      String url = "";
-
-      if (host != null)
+      String queryStr = null;
+      if (query != null && query.size() > 0)
       {
-         url += protocol != null ? protocol : "http";
-         url += "://";
-         url += host;
-         if (port != null)
+         queryStr = "";
+         for (int i = 0; i < query.size(); i++)
          {
-            url += ":" + port;
+            NVPair pair = query.get(i);
+            if (pair.value == null)
+               queryStr += pair.name;
+            else
+               queryStr += pair.name + "=" + pair.value;
+
+            if (i < query.size() - 1)
+               queryStr += "&";
          }
       }
 
-      if (path != null)
-      {
-         url += path;
-      }
+      Url u = new Url(this.protocol, this.host, this.port, this.path, queryStr);
+      return u;
 
-      for (int i = 0; i < query.size(); i++)
-      {
-         if (i == 0)
-            url += "?";
-
-         NVPair pair = query.get(i);
-         if (pair.value == null)
-            url += pair.name;
-         else
-            url += pair.name + "=" + pair.value;
-
-         if (i < query.size() - 1)
-            url += "&";
-      }
-
-      return new Url(url);
    }
 
    public class NVPair
