@@ -226,13 +226,25 @@ public class Url implements Serializable
       String url = protocol + "://" + host;
 
       if (port > 0)
-         url += ":" + port;
+      {
+         if (!((port == 80 && "http".equalsIgnoreCase(protocol)) || (port == 443 && "https".equalsIgnoreCase(protocol))))
+            url += ":" + port;
+      }
 
-      if (path != null)
+      if (!J.empty(path))
+      {
+         if (!path.startsWith("/"))
+            url += "/";
+
          url += path;
+      }
 
-      if (query != null)
-         url += "?" + query;
+      if (!J.empty(query))
+      {
+         if (!query.startsWith("?"))
+            url += "?";
+         url += query;
+      }
 
       return url;
    }
@@ -278,8 +290,12 @@ public class Url implements Serializable
    public int getPort()
    {
       if (port == 0)
-         return 80;
-
+      {
+         if ("http".equalsIgnoreCase(protocol))
+            return 80;
+         if ("https".equalsIgnoreCase(protocol))
+            return 443;
+      }
       return port;
    }
 
