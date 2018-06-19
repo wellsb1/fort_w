@@ -32,7 +32,10 @@ public class JS
    {
       if (str == null)
          return null;
-      return str.replaceAll("[\\p{Cc}&&[^\r\n\t]]", "");
+      
+      System.out.println(":SLKDJF:LKSJDF:LSKJDF:SLKDJF:SDLKJFS:DLKFJ:LKJ");
+      String escaped = str.replaceAll("[\\p{Cc}&&[^\r\n\t]]", "REPLACED");
+      return escaped;
    }
 
    static Object parse(String js)
