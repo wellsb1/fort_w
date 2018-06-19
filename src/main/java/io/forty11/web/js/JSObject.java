@@ -12,14 +12,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.lang3.text.translate.CharSequenceTranslator;
+import org.apache.commons.lang3.text.translate.EntityArrays;
+import org.apache.commons.lang3.text.translate.LookupTranslator;
+
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.io.JsonStringEncoder;
 
 import io.forty11.j.J;
 
 public class JSObject
 {
-   LinkedHashMap<String, Property> properties = new LinkedHashMap();
+   public static CharSequenceTranslator ESCAPE_JAVA = new LookupTranslator(new String[][]{{"\"", "\\\""}, {"\\", "\\\\"}, {",", "\\u002C"},}).with(new LookupTranslator(EntityArrays.JAVA_CTRL_CHARS_ESCAPE()));
+
+   LinkedHashMap<String, Property>      properties  = new LinkedHashMap();
 
    public JSObject()
    {
@@ -349,6 +356,10 @@ public class JSObject
             }
             else
             {
+               strVal = ESCAPE_JAVA.translate(strVal);
+
+               //JsonStringEncoder e = JsonStringEncoder.getInstance();
+               //strVal = new String(e.encodeAsUTF8(strVal));
                json.writeStringField(p.name, strVal);
             }
          }

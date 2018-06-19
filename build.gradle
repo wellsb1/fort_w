@@ -28,6 +28,9 @@ dependencies {
     compile (group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.6+') {
             exclude group: 'com.fasterxml.jackson', module: 'jackson-annotations'
     }
+    
+    compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.7'
+    
 	testCompile group: 'junit', name: 'junit', version: '4.10'
 	testCompile group: 'eu.rekawek.toxiproxy', name: 'toxiproxy-java', version: '2.1.1'
 }
@@ -36,6 +39,5 @@ dependencies {
 jar {
     baseName 'forty11-w'
 }
-
 
 
