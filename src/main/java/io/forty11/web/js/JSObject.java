@@ -356,10 +356,10 @@ public class JSObject
             }
             else
             {
-               strVal = ESCAPE_JAVA.translate(strVal);
+               //strVal = ESCAPE_JAVA.translate(strVal);
 
-               //JsonStringEncoder e = JsonStringEncoder.getInstance();
-               //strVal = new String(e.encodeAsUTF8(strVal));
+               JsonStringEncoder e = JsonStringEncoder.getInstance();
+               strVal = new String(e.encodeAsUTF8(strVal));
                json.writeStringField(p.name, strVal);
             }
          }
