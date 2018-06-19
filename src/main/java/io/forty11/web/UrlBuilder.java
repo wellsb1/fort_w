@@ -170,7 +170,7 @@ public class UrlBuilder
          for (int i = 0; i < query.size(); i++)
          {
             NVPair pair = query.get(i);
-            if (pair.value == null)
+            if (J.empty(pair.value))
                queryStr += pair.name;
             else
                queryStr += pair.name + "=" + pair.value;

@@ -48,7 +48,7 @@ public class Url implements Serializable
                }
                else
                {
-                  params.put(URLDecoder.decode(pair, "UTF-8"), "");
+                  params.put(URLDecoder.decode(pair, "UTF-8"), null);
                }
             }
          }
