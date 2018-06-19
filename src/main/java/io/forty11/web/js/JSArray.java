@@ -97,6 +97,8 @@ public class JSArray extends JSObject
 
    void write(JsonGenerator json, HashSet visited) throws Exception
    {
+      if (true)
+         throw new Exception("asldkfja;sdlfkja");
       json.writeStartArray();
       for (Object obj : objects)
       {

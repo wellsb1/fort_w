@@ -269,6 +269,9 @@ public class JSObject
 
    void write(JsonGenerator json, HashSet visited) throws Exception
    {
+      if (true)
+         throw new Exception("asldkfja;sdlfkja");
+      
       Property href = getProperty("href");
 
       if (visited.contains(this))
