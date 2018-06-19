@@ -70,6 +70,8 @@ public class UrlBuilder
       return host;
    }
 
+
+
    public UrlBuilder withHost(String host)
    {
       host = host.replace("/", "");
@@ -113,6 +115,29 @@ public class UrlBuilder
       return this;
    }
 
+   public UrlBuilder addPath(String dir)
+   {
+      if (path == null)
+         path = "/";
+
+      if(!path.startsWith("/"))
+         path = "/" + path;
+      
+      if (!path.endsWith("/"))
+         path += "/";
+
+      while (dir.startsWith("/"))
+         dir = dir.substring(1);
+
+      path += dir;
+
+      if (!path.endsWith("/"))
+         path += "/";
+
+      return this;
+   }
+   
+   
    /**
     * Parses queryString and adds the nvpairs to query.
     */
