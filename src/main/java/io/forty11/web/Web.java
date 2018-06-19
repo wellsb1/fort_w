@@ -257,6 +257,8 @@ public class Web
 
                   Url u = new Url(url);
                   String fileName = u.getFile();
+                  if(fileName == null)
+                     fileName = J.slugify(u.toString());
 
                   // if we have a retry file and it's length matches the Content-Range header's start and the Content-Range header's unit's are bytes use the existing file
                   if (response.code == 404)
