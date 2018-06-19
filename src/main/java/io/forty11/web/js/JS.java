@@ -33,8 +33,7 @@ public class JS
       if (str == null)
          return null;
       
-      System.out.println(":SLKDJF:LKSJDF:LSKJDF:SLKDJF:SDLKJFS:DLKFJ:LKJ");
-      String escaped = str.replaceAll("[\\p{Cc}&&[^\r\n\t]]", "REPLACED");
+      String escaped = str.replaceAll("[\\p{Cc}&&[^\r\n\t]]", "");
       return escaped;
    }
 
