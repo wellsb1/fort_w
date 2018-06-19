@@ -118,6 +118,11 @@ public class Web
    {
       return rest(new Request("PUT", url, body, headers));
    }
+   
+   public static FutureResponse put(String url, String body, List<String> headers, int retryAttempts)
+   {
+      return rest(new Request("PUT", url, body, headers, retryAttempts));
+   }
 
    public static FutureResponse post(String url, String body)
    {
@@ -147,6 +152,11 @@ public class Web
    public static FutureResponse delete(String url, String body, List<String> headers)
    {
       return rest(new Request("DELETE", url, body, headers));
+   }
+   
+   public static FutureResponse delete(String url, String body, List<String> headers, int retryAttempts)
+   {
+      return rest(new Request("DELETE", url, body, headers, retryAttempts));
    }
 
    public static FutureResponse rest(final Request request)
