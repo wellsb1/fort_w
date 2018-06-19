@@ -24,15 +24,15 @@ public class JS
    }
 
    /**
-    * Removes control characters exception /r/n/t
-    * 
     * @see https://stackoverflow.com/questions/14028716/how-to-remove-control-characters-from-java-string
-    * @param string
+    * @param str
     * @return
     */
-   public static String encodeString(String string)
+   public static String encodeString(String str)
    {
-      return string.replaceAll("[\\p{Cntrl}&&[^\r\n\t]]", "");
+      if (str == null)
+         return null;
+      return str.replaceAll("[\\p{Cc}&&[^\r\n\t]]", "");
    }
 
    static Object parse(String js)
