@@ -118,7 +118,7 @@ public class Web
    {
       return rest(new Request("PUT", url, body, headers));
    }
-   
+
    public static FutureResponse put(String url, String body, List<String> headers, int retryAttempts)
    {
       return rest(new Request("PUT", url, body, headers, retryAttempts));
@@ -153,7 +153,7 @@ public class Web
    {
       return rest(new Request("DELETE", url, body, headers));
    }
-   
+
    public static FutureResponse delete(String url, String body, List<String> headers, int retryAttempts)
    {
       return rest(new Request("DELETE", url, body, headers, retryAttempts));
@@ -231,8 +231,7 @@ public class Web
                   if (request.getBody() != null && req instanceof HttpEntityEnclosingRequestBase)
                   {
                      response.log += "\r\n--request body--------";
-                     //response.log += "\r\n" + json;
-                     ((HttpEntityEnclosingRequestBase) req).setEntity(new StringEntity(request.getBody()));
+                     ((HttpEntityEnclosingRequestBase) req).setEntity(new StringEntity(request.getBody(), "UTF-8"));
                   }
 
                   RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(timeout).setConnectTimeout(timeout).setConnectionRequestTimeout(timeout).build();

@@ -32,9 +32,9 @@ public class JS
    {
       if (str == null)
          return null;
-      
-      String escaped = str.replaceAll("[\\p{Cc}&&[^\r\n\t]]", "");
-      return escaped;
+
+      str = str.replaceAll("[\\p{Cntrl}\\p{Cc}\\p{Cf}\\p{Co}\\p{Cn}\u00A0&&[^\r\n\t]]", " ");
+      return str;
    }
 
    static Object parse(String js)
