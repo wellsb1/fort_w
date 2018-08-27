@@ -20,7 +20,6 @@ package io.forty11.web;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -366,29 +365,9 @@ public class Web
                   }
                   else
                   {
-                     if (!response.isSuccess())
+                     if (!response.isSuccess() && response.getError() != null && !(isNetworkException(response.getError())))
                      {
-                        response.file = null;
-                        if (tempFile != null)
-                        {
-                           try
-                           {
-                              // attempt to read the tempFile into the error contents
-                              response.errorContent = J.read(new BufferedInputStream(new FileInputStream(tempFile)));
-                           }
-                           catch (Exception e)
-                           {
-                           }
-
-                           debug("Deleting temp file: " + tempFile);
-                           tempFile.delete();
-                        }
-
-                        if (response.getError() != null && !(isNetworkException(response.getError())))
-                        {
-                           log.warn("Error in Web.rest() . " + m + " : " + url, response.getError());
-                        }
-
+                        log.warn("Error in Web.rest() . " + m + " : " + url, response.getError());
                      }
 
                      setResponse(response);
@@ -850,7 +829,6 @@ public class Web
       String                               type              = null;
       public int                           code              = 0;
       public String                        status            = "";
-      public String                        errorContent      = null;
       public Exception                     error             = null;
       public String                        log               = "";
 
@@ -886,11 +864,6 @@ public class Web
          return error;
       }
 
-      public String getErrorContent()
-      {
-         return errorContent;
-      }
-
       public String getLog()
       {
          return log;
@@ -918,7 +891,7 @@ public class Web
       public InputStream getInputStream() throws IOException
       {
          if (file != null)
-            return new BufferedInputStream(new DeleteFileOnCloseInputStream(file));
+            return new BufferedInputStream(new FileInputStream(file));
 
          return null;
       }
@@ -927,7 +900,24 @@ public class Web
       {
          try
          {
-            if (file != null && file.length() > 0)
+            if (isSuccess() && file != null && file.length() > 0)
+            {
+               String string = J.read(getInputStream());
+               return string;
+            }
+         }
+         catch (Exception ex)
+         {
+            J.rethrow(ex);
+         }
+         return null;
+      }
+
+      public String getErrorContent()
+      {
+         try
+         {
+            if (!isSuccess() && file != null && file.length() > 0)
             {
                String string = J.read(getInputStream());
                return string;
@@ -1123,36 +1113,18 @@ public class Web
          return "Response [url=" + url + ", type=" + type + ", code=" + code + ", status=" + status + "]";
       }
 
-   }
-
-   /**
-    * Simple FileInputStream that will attempt to delete the file onf close of the inputstream
-    *
-    */
-   public static class DeleteFileOnCloseInputStream extends FileInputStream
-   {
-
-      private File file;
-
-      public DeleteFileOnCloseInputStream(File file) throws FileNotFoundException
-      {
-         super(file);
-         this.file = file;
-      }
-
       @Override
-      public void close() throws IOException
+      public void finalize()
       {
-         try
+         if (file != null)
          {
-            super.close();
-         }
-         finally
-         {
-            if (file != null)
+            try
             {
                file.delete();
-               file = null;
+            }
+            catch (Throwable t)
+            {
+               // ignore
             }
          }
       }
