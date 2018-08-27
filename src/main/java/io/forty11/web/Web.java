@@ -271,7 +271,7 @@ public class Web
 
                   Url u = new Url(url);
                   String fileName = u.getFile();
-                  if(fileName == null)
+                  if (fileName == null)
                      fileName = J.slugify(u.toString());
 
                   // if we have a retry file and it's length matches the Content-Range header's start and the Content-Range header's unit's are bytes use the existing file
@@ -886,6 +886,11 @@ public class Web
          return error;
       }
 
+      public String getErrorContent()
+      {
+         return errorContent;
+      }
+
       public String getLog()
       {
          return log;
@@ -926,10 +931,6 @@ public class Web
             {
                String string = J.read(getInputStream());
                return string;
-            }
-            else if (!isSuccess())
-            {
-               return errorContent;
             }
          }
          catch (Exception ex)
