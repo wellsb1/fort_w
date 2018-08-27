@@ -23,6 +23,20 @@ public class JS
       return parse(json);
    }
 
+   /**
+    * @see https://stackoverflow.com/questions/14028716/how-to-remove-control-characters-from-java-string
+    * @param str
+    * @return
+    */
+   public static String encodeString(String str)
+   {
+      if (str == null)
+         return null;
+
+      str = str.replaceAll("[\\p{Cntrl}\\p{Cc}\\p{Cf}\\p{Co}\\p{Cn}\u00A0&&[^\r\n\t]]", " ");
+      return str;
+   }
+
    static Object parse(String js)
    {
       try

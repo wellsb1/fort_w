@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import io.forty11.j.J;
 
@@ -21,6 +22,19 @@ public class UrlBuilder
    public UrlBuilder()
    {
 
+   }
+
+   public UrlBuilder(String url)
+   {
+      this(new Url(url));
+   }
+
+   public UrlBuilder(Url url)
+   {
+      protocol = url.getProtocol();
+      host = url.getHost();
+      port = url.getPort();
+      path = url.getPath();
    }
 
    public UrlBuilder(String protocol, String host, Integer port, String path, Object... params)
@@ -46,12 +60,9 @@ public class UrlBuilder
       }
    }
 
-   public UrlBuilder(Url url)
+   public String toString()
    {
-      protocol = url.getProtocol();
-      host = url.getHost();
-      port = url.getPort();
-      path = url.getPath();
+      return toUrl().toString();
    }
 
    public String getHost()
@@ -102,6 +113,41 @@ public class UrlBuilder
       return this;
    }
 
+   public UrlBuilder addPath(String dir)
+   {
+      if (path == null)
+         path = "/";
+
+      if (!path.startsWith("/"))
+         path = "/" + path;
+
+      if (!path.endsWith("/"))
+         path += "/";
+
+      while (dir.startsWith("/"))
+         dir = dir.substring(1);
+
+      path += dir;
+
+      if (!path.endsWith("/"))
+         path += "/";
+
+      return this;
+   }
+
+   /**
+    * Parses queryString and adds the nvpairs to query.
+    */
+   public UrlBuilder withQuery(String queryString)
+   {
+      Map<String, String> params = Url.parseQuery(queryString);
+      for (String key : params.keySet())
+      {
+         query.add(new NVPair(key, params.get(key)));
+      }
+      return this;
+   }
+
    public UrlBuilder withParam(String name, String value)
    {
       try
@@ -117,40 +163,26 @@ public class UrlBuilder
 
    public Url toUrl()
    {
-      String url = "";
-
-      if (host != null)
+      String queryStr = null;
+      if (query != null && query.size() > 0)
       {
-         url += protocol != null ? protocol : "http";
-         url += "://";
-         url += host;
-         if (port != null)
+         queryStr = "";
+         for (int i = 0; i < query.size(); i++)
          {
-            url += ":" + port;
+            NVPair pair = query.get(i);
+            if (J.empty(pair.value))
+               queryStr += pair.name;
+            else
+               queryStr += pair.name + "=" + pair.value;
+
+            if (i < query.size() - 1)
+               queryStr += "&";
          }
       }
 
-      if (path != null)
-      {
-         url += path;
-      }
+      Url u = new Url(this.protocol, this.host, this.port, this.path, queryStr);
+      return u;
 
-      for (int i = 0; i < query.size(); i++)
-      {
-         if (i == 0)
-            url += "?";
-
-         NVPair pair = query.get(i);
-         if (pair.value == null)
-            url += pair.name;
-         else
-            url += pair.name + "=" + pair.value;
-
-         if (i < query.size() - 1)
-            url += "&";
-      }
-
-      return new Url(url);
    }
 
    public class NVPair

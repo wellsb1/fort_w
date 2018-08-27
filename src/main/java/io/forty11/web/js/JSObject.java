@@ -14,12 +14,13 @@ import java.util.Set;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.io.JsonStringEncoder;
 
 import io.forty11.j.J;
 
 public class JSObject
 {
-   LinkedHashMap<String, Property> properties = new LinkedHashMap();
+   LinkedHashMap<String, Property>      properties  = new LinkedHashMap();
 
    public JSObject()
    {
@@ -349,6 +350,7 @@ public class JSObject
             }
             else
             {
+               strVal = JS.encodeString(strVal);
                json.writeStringField(p.name, strVal);
             }
          }

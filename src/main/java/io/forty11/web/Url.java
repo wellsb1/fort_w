@@ -16,9 +16,50 @@
 package io.forty11.web;
 
 import java.io.Serializable;
+import java.net.URLDecoder;
+import java.util.HashMap;
+import java.util.Map;
+
+import io.forty11.j.J;
 
 public class Url implements Serializable
 {
+   public static Map<String, String> parseQuery(String query)
+   {
+      Map params = new HashMap();
+      try
+      {
+         while (query.startsWith("?") || query.startsWith("&") || query.startsWith("="))
+         {
+            query = query.substring(1);
+         }
+
+         if (query.length() > 0)
+         {
+            String[] pairs = query.split("&");
+            for (String pair : pairs)
+            {
+               int idx = pair.indexOf("=");
+               if (idx > 0)
+               {
+                  String key = URLDecoder.decode(pair.substring(0, idx), "UTF-8");
+                  String value = URLDecoder.decode(pair.substring(idx + 1), "UTF-8");
+                  params.put(key, value);
+               }
+               else
+               {
+                  params.put(URLDecoder.decode(pair, "UTF-8"), null);
+               }
+            }
+         }
+      }
+      catch (Exception ex)
+      {
+         J.rethrow(ex);
+      }
+      return params;
+   }
+
    protected String protocol = "http";
    protected String host     = null;
    protected int    port     = 0;
@@ -38,6 +79,16 @@ public class Url implements Serializable
    public Url(String parent, String url)
    {
       this(new Url(parent), url);
+   }
+
+   public Url(String protocol, String host, int port, String path, String query)
+   {
+      super();
+      this.protocol = protocol;
+      this.host = host;
+      this.port = port;
+      this.path = path;
+      this.query = query;
    }
 
    protected void parse(Url parent, String url)
@@ -175,15 +226,35 @@ public class Url implements Serializable
       String url = protocol + "://" + host;
 
       if (port > 0)
-         url += ":" + port;
+      {
+         if (!((port == 80 && "http".equalsIgnoreCase(protocol)) || (port == 443 && "https".equalsIgnoreCase(protocol))))
+            url += ":" + port;
+      }
 
-      if (path != null)
+      if (!J.empty(path))
+      {
+         if (!path.startsWith("/"))
+            url += "/";
+
          url += path;
+      }
 
-      if (query != null)
-         url += "?" + query;
+      if (!J.empty(query))
+      {
+         if (!query.startsWith("?"))
+            url += "?";
+         url += query;
+      }
 
       return url;
+   }
+
+   /**
+    * @return the url without any querystring
+    */
+   public Url getBase()
+   {
+      return new Url(this.protocol, this.host, this.port, this.path, null);
    }
 
    public boolean equals(Object obj)
@@ -219,8 +290,12 @@ public class Url implements Serializable
    public int getPort()
    {
       if (port == 0)
-         return 80;
-
+      {
+         if ("http".equalsIgnoreCase(protocol))
+            return 80;
+         if ("https".equalsIgnoreCase(protocol))
+            return 443;
+      }
       return port;
    }
 

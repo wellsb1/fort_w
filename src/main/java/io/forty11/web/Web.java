@@ -67,7 +67,7 @@ import org.apache.http.ssl.TrustStrategy;
 
 import io.forty11.j.J;
 import io.forty11.j.api.Streams;
-import io.forty11.utils.Executor;
+import io.forty11.j.utils.Executor;
 
 /**
  * 
@@ -117,6 +117,11 @@ public class Web
    public static FutureResponse put(String url, String body, List<String> headers)
    {
       return rest(new Request("PUT", url, body, headers));
+   }
+
+   public static FutureResponse put(String url, String body, List<String> headers, int retryAttempts)
+   {
+      return rest(new Request("PUT", url, body, headers, retryAttempts));
    }
 
    public static FutureResponse post(String url, String body)
@@ -231,8 +236,7 @@ public class Web
                   if (request.getBody() != null && req instanceof HttpEntityEnclosingRequestBase)
                   {
                      response.log += "\r\n--request body--------";
-                     //response.log += "\r\n" + json;
-                     ((HttpEntityEnclosingRequestBase) req).setEntity(new StringEntity(request.getBody()));
+                     ((HttpEntityEnclosingRequestBase) req).setEntity(new StringEntity(request.getBody(), "UTF-8"));
                   }
 
                   RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(timeout).setConnectTimeout(timeout).setConnectionRequestTimeout(timeout).build();
@@ -267,6 +271,8 @@ public class Web
 
                   Url u = new Url(url);
                   String fileName = u.getFile();
+                  if(fileName == null)
+                     fileName = J.slugify(u.toString());
 
                   // if we have a retry file and it's length matches the Content-Range header's start and the Content-Range header's unit's are bytes use the existing file
                   if (response.code == 404)
@@ -400,8 +406,13 @@ public class Web
    {
       return ex instanceof org.apache.http.conn.HttpHostConnectException //
             || ex instanceof org.apache.http.conn.ConnectTimeoutException //
-            || ex instanceof java.net.ConnectException //
-            || ex instanceof java.net.SocketTimeoutException;
+            || ex instanceof org.apache.http.NoHttpResponseException //
+            || ex.getClass().getName().startsWith("java.net")
+      //|| ex instanceof java.net.ConnectException //
+      //|| ex instanceof java.net.NoRouteToHostException //
+      //|| ex instanceof java.net.SocketTimeoutException //
+      //|| ex instanceof java.net.UnknownHostException //
+      ;
    }
 
    static synchronized void submit(FutureResponse future)
