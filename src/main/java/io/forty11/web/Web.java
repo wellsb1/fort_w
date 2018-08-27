@@ -149,6 +149,16 @@ public class Web
       return rest(new Request("DELETE", url, body, headers));
    }
 
+   public static FutureResponse delete(String url, String body, List<String> headers, int retryAttempts)
+   {
+      return rest(new Request("DELETE", url, body, headers, retryAttempts));
+   }
+
+   public static FutureResponse delete(String url, int retryAttempts)
+   {
+      return rest(new Request("DELETE", url, null, null, retryAttempts));
+   }
+
    public static FutureResponse rest(final Request request)
    {
       final FutureResponse future = new FutureResponse()
@@ -355,6 +365,15 @@ public class Web
                         response.file = null;
                         if (tempFile != null)
                         {
+                           try
+                           {
+                              // attempt to read the tempFile into the error contents
+                              response.errorContent = J.read(new BufferedInputStream(new FileInputStream(tempFile)));
+                           }
+                           catch (Exception e)
+                           {
+                           }
+
                            debug("Deleting temp file: " + tempFile);
                            tempFile.delete();
                         }
@@ -820,6 +839,7 @@ public class Web
       String                               type              = null;
       public int                           code              = 0;
       public String                        status            = "";
+      public String                        errorContent      = null;
       public Exception                     error             = null;
       public String                        log               = "";
 
@@ -895,6 +915,10 @@ public class Web
             {
                String string = J.read(getInputStream());
                return string;
+            }
+            else if (!isSuccess())
+            {
+               return errorContent;
             }
          }
          catch (Exception ex)
@@ -1140,4 +1164,5 @@ public class Web
          setURI(URI.create(url));
       }
    }
+
 }
