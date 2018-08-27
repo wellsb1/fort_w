@@ -1120,7 +1120,9 @@ public class Web
          {
             try
             {
-               file.delete();
+               File tempFile = file;
+               file = null;
+               tempFile.delete();
             }
             catch (Throwable t)
             {
