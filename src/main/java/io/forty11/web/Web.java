@@ -20,7 +20,6 @@ package io.forty11.web;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -159,6 +158,11 @@ public class Web
       return rest(new Request("DELETE", url, body, headers, retryAttempts));
    }
 
+   public static FutureResponse delete(String url, int retryAttempts)
+   {
+      return rest(new Request("DELETE", url, null, null, retryAttempts));
+   }
+
    public static FutureResponse rest(final Request request)
    {
       final FutureResponse future = new FutureResponse()
@@ -266,7 +270,7 @@ public class Web
 
                   Url u = new Url(url);
                   String fileName = u.getFile();
-                  if(fileName == null)
+                  if (fileName == null)
                      fileName = J.slugify(u.toString());
 
                   // if we have a retry file and it's length matches the Content-Range header's start and the Content-Range header's unit's are bytes use the existing file
@@ -361,20 +365,9 @@ public class Web
                   }
                   else
                   {
-                     if (!response.isSuccess())
+                     if (!response.isSuccess() && response.getError() != null && !(isNetworkException(response.getError())))
                      {
-                        response.file = null;
-                        if (tempFile != null)
-                        {
-                           debug("Deleting temp file: " + tempFile);
-                           tempFile.delete();
-                        }
-
-                        if (response.getError() != null && !(isNetworkException(response.getError())))
-                        {
-                           log.warn("Error in Web.rest() . " + m + " : " + url, response.getError());
-                        }
-
+                        log.warn("Error in Web.rest() . " + m + " : " + url, response.getError());
                      }
 
                      setResponse(response);
@@ -898,7 +891,7 @@ public class Web
       public InputStream getInputStream() throws IOException
       {
          if (file != null)
-            return new BufferedInputStream(new DeleteFileOnCloseInputStream(file));
+            return new BufferedInputStream(new FileInputStream(file));
 
          return null;
       }
@@ -907,7 +900,24 @@ public class Web
       {
          try
          {
-            if (file != null && file.length() > 0)
+            if (isSuccess() && file != null && file.length() > 0)
+            {
+               String string = J.read(getInputStream());
+               return string;
+            }
+         }
+         catch (Exception ex)
+         {
+            J.rethrow(ex);
+         }
+         return null;
+      }
+
+      public String getErrorContent()
+      {
+         try
+         {
+            if (!isSuccess() && file != null && file.length() > 0)
             {
                String string = J.read(getInputStream());
                return string;
@@ -1103,36 +1113,20 @@ public class Web
          return "Response [url=" + url + ", type=" + type + ", code=" + code + ", status=" + status + "]";
       }
 
-   }
-
-   /**
-    * Simple FileInputStream that will attempt to delete the file onf close of the inputstream
-    *
-    */
-   public static class DeleteFileOnCloseInputStream extends FileInputStream
-   {
-
-      private File file;
-
-      public DeleteFileOnCloseInputStream(File file) throws FileNotFoundException
-      {
-         super(file);
-         this.file = file;
-      }
-
       @Override
-      public void close() throws IOException
+      public void finalize()
       {
-         try
+         if (file != null)
          {
-            super.close();
-         }
-         finally
-         {
-            if (file != null)
+            try
             {
-               file.delete();
+               File tempFile = file;
                file = null;
+               tempFile.delete();
+            }
+            catch (Throwable t)
+            {
+               // ignore
             }
          }
       }
@@ -1156,4 +1150,5 @@ public class Web
          setURI(URI.create(url));
       }
    }
+
 }
