@@ -5,6 +5,7 @@ import java.util.Iterator;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.NumericNode;
 
 public class JS
 {
@@ -69,7 +70,15 @@ public class JS
          return null;
 
       if (json.isValueNode())
-         return json.asText();//FIX
+      {
+         if (json.isNumber())
+            return json.numberValue();
+
+         if (json.isBoolean())
+            return json.booleanValue();
+
+         return json.asText();
+      }
 
       if (json.isArray())
       {
