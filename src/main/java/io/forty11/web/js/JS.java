@@ -69,7 +69,15 @@ public class JS
          return null;
 
       if (json.isValueNode())
-         return json.asText();//FIX
+      {
+         if (json.isNumber())
+            return json.numberValue();
+
+         if (json.isBoolean())
+            return json.booleanValue();
+
+         return json.asText();
+      }
 
       if (json.isArray())
       {
