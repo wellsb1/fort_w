@@ -73,7 +73,7 @@ public class JSObject
       return null;
    }
 
-   protected Object find(String path)
+   public Object find(String path)
    {
       List<String> props = J.explode("\\.", path);
 
