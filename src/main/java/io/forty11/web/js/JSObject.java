@@ -20,7 +20,7 @@ import io.forty11.j.J;
 
 public class JSObject
 {
-   LinkedHashMap<String, Property>      properties  = new LinkedHashMap();
+   LinkedHashMap<String, Property> properties = new LinkedHashMap();
 
    public JSObject()
    {
@@ -71,6 +71,20 @@ public class JSObject
          return p.getValue();
 
       return null;
+   }
+
+   protected Object find(String path)
+   {
+      List<String> props = J.explode("\\.", path);
+
+      Object obj = this;
+      for (String prop : props)
+      {
+         if (obj == null)
+            break;
+         obj = ((JSObject) obj).get(prop);
+      }
+      return obj;
    }
 
    public Object put(String name, Object value)
