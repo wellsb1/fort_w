@@ -24,8 +24,6 @@ import java.util.List;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 
-import io.forty11.web.js.JSObject.Property;
-
 public class JSArray extends JSObject
 {
    List objects = new ArrayList();
