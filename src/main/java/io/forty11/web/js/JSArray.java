@@ -95,7 +95,8 @@ public class JSArray extends JSObject
       return objects.contains(object);
    }
 
-   void write(JsonGenerator json, HashSet visited) throws Exception
+   @Override
+   void write(JsonGenerator json, HashSet visited, boolean lowercaseNames) throws Exception
    {
       json.writeStartArray();
       for (Object obj : objects)
@@ -106,7 +107,7 @@ public class JSArray extends JSObject
          }
          else if (obj instanceof JSObject)
          {
-            ((JSObject) obj).write(json, visited);
+            ((JSObject) obj).write(json, visited, lowercaseNames);
          }
          else if (obj instanceof BigDecimal)
          {

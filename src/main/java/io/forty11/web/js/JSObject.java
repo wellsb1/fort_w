@@ -263,13 +263,18 @@ public class JSObject
 
    public String toString(boolean pretty)
    {
+      return toString(pretty, false);
+   }
+
+   public String toString(boolean pretty, boolean lowercaseNames)
+   {
       try
       {
          ByteArrayOutputStream baos = new ByteArrayOutputStream();
          JsonGenerator json = new JsonFactory().createGenerator(baos);
          if (pretty)
             json.useDefaultPrettyPrinter();
-         write(json, new HashSet());
+         write(json, new HashSet(), lowercaseNames);
          json.flush();
          baos.flush();
 
@@ -281,7 +286,7 @@ public class JSObject
       }
    }
 
-   void write(JsonGenerator json, HashSet visited) throws Exception
+   void write(JsonGenerator json, HashSet visited, boolean lowercaseNames) throws Exception
    {
       Property href = getProperty("href");
 
@@ -303,7 +308,6 @@ public class JSObject
       if (href != null)
          json.writeStringField("href", href.getValue() + "");
 
-      //for (String key : Collections.sort(new ArrayList(properties.keySet())))
       for (String key : properties.keySet())
       {
          Property p = properties.get(key);
@@ -316,8 +320,11 @@ public class JSObject
          }
          else if (p.value instanceof JSObject)
          {
-            json.writeFieldName(p.name);
-            ((JSObject) p.value).write(json, visited);
+            if (!lowercaseNames)
+               json.writeFieldName(p.name);
+            else
+               json.writeFieldName(p.name.toLowerCase());
+            ((JSObject) p.value).write(json, visited, lowercaseNames);
          }
          else if (p.value instanceof Date)
          {
