@@ -19,7 +19,12 @@ sourceCompatibility = 1.6
 
 dependencies {
 
-	compile 'com.github.wellsb1:fort_j:release-1.0.x-SNAPSHOT'
+	if (gradle.ext.fort_w['addFortJProjectToClasspath']) {
+      compile findProject(":fort_j")
+   }
+   else {
+      compile("com.github.wellsb1:fort_j:release-1.0.x-SNAPSHOT") { changing = true }
+   }
 	       
 	compile group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.5.5'
 	compile group: 'org.apache.httpcomponents', name: 'httpmime', version: '4.5.5'
