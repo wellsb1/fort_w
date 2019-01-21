@@ -2,6 +2,7 @@ package io.forty11.web.js;
 
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.sql.Date;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -354,9 +355,9 @@ public class JSObject
          {
             json.writeNumberField(p.name, (BigDecimal) p.value);
          }
-         else if (p.value instanceof BigDecimal)
+         else if (p.value instanceof BigInteger)
          {
-            json.writeNumberField(p.name, (BigDecimal) p.value);
+            json.writeNumberField(p.name, ((BigInteger) p.value).intValue());
          }
          else if (p.value instanceof Boolean)
          {
