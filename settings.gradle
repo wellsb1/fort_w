@@ -11,7 +11,7 @@
 gradle.ext {
 
    fort_w = [
-      'addFortJProjectToClasspath':true
+      'addFortJProjectToClasspath':false
    ]
 
    // Values to edit
