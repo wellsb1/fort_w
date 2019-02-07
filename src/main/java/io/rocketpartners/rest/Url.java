@@ -1,5 +1,8 @@
 /*
- * Copyright 2008-2017 Wells Burke
+ * Copyright (c) 2016-2019 Rocket Partners, LLC
+ * http://rocketpartners.io
+ * 
+ * Copyright 2008-2016 Wells Burke
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,14 +16,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.forty11.web;
+package io.rocketpartners.rest;
 
 import java.io.Serializable;
 import java.net.URLDecoder;
 import java.util.HashMap;
 import java.util.Map;
 
-import io.forty11.j.J;
+import io.rocketpartners.J;
 
 public class Url implements Serializable
 {
