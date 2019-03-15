@@ -5,45 +5,41 @@ apply plugin: 'maven'
 version = '1.0.0'
 group = 'com.github.wellsb1'
 
-repositories { 
+repositories {
    mavenLocal()
-   mavenCentral() 
+   mavenCentral()
    maven { url 'https://jitpack.io' }
 }
 
-configurations.all {
-    resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
-}
+configurations.all { resolutionStrategy.cacheChangingModulesFor 0, 'seconds' }
 
 sourceCompatibility = 1.6
 
 dependencies {
 
-	if (gradle.ext.fort_w['addFortJProjectToClasspath']) {
+   if (gradle.ext.fort_w['addFortJProjectToClasspath']) {
       compile findProject(":fort_j")
    }
    else {
       compile("com.github.wellsb1:fort_j:release-1.0.x-SNAPSHOT") { changing = true }
    }
-	       
-	compile group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.5.5'
-	compile group: 'org.apache.httpcomponents', name: 'httpmime', version: '4.5.5'
-	
-    compile group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '2.9+'
-    compile (group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.9+') {
-            exclude group: 'com.fasterxml.jackson', module: 'jackson-annotations'
-    }
-    
-    //lang3 contains StringUtils which are useful for debugging charset issues
-    //compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.7'
-    
-	testCompile group: 'junit', name: 'junit', version: '4.10'
-	testCompile group: 'eu.rekawek.toxiproxy', name: 'toxiproxy-java', version: '2.1.1'
+
+   compile group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.5.5'
+   compile group: 'org.apache.httpcomponents', name: 'httpmime', version: '4.5.5'
+
+   compile group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '2.9+'
+   compile (group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.9+') {
+      exclude group: 'com.fasterxml.jackson', module: 'jackson-annotations'
+   }
+
+   //lang3 contains StringUtils which are useful for debugging charset issues
+   //compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.7'
+
+   testCompile group: 'junit', name: 'junit', version: '4.10'
+   testCompile group: 'eu.rekawek.toxiproxy', name: 'toxiproxy-java', version: '2.1.1'
 }
 
 
-jar {
-    baseName 'forty11-w'
-}
+jar { baseName 'forty11-w' }
 
 
