@@ -75,18 +75,32 @@ import io.forty11.j.utils.Executor;
  */
 public class Web
 {
-   static Log       log                      = LogFactory.getLog(Web.class);
+   static Log                        log                      = LogFactory.getLog(Web.class);
 
-   static final int DEFAULT_TIMEOUT          = 30000;
+   static final int                  DEFAULT_TIMEOUT          = 30000;
 
-   static final int POOL_MIN                 = 2;
-   static final int POOL_MAX                 = 100;
-   static final int QUEUE_MAX                = 500;
-   static final int DEFAULT_RETRY_ATTEMPTS   = 5;
-   static final int TOTAL_MAX_RETRY_ATTEMPTS = 50;
+   static final int                  POOL_MIN                 = 2;
+   static final int                  POOL_MAX                 = 100;
+   static final int                  QUEUE_MAX                = 500;
+   static final int                  DEFAULT_RETRY_ATTEMPTS   = 5;
+   static final int                  TOTAL_MAX_RETRY_ATTEMPTS = 50;
 
-   static Executor  pool                     = null;
-   static Timer     timer                    = null;
+   static Executor                   pool                     = null;
+   static Timer                      timer                    = null;
+   static List<RequestMapper>        requestMappers           = new ArrayList();
+   
+   
+   public static void addRequestMapper(RequestMapper requestMap) {
+      requestMappers.add(requestMap);
+   }
+   
+   public static boolean removeRequestMapper(RequestMapper requestMap) {
+      return requestMappers.remove(requestMap);
+   }
+   
+   public static RequestMapper requestMapperAtIndex(int i) {
+      return requestMappers.get(i);
+   }
 
    public static FutureResponse get(String url)
    {
@@ -165,10 +179,16 @@ public class Web
 
    public static FutureResponse rest(final Request request)
    {
+
       final FutureResponse future = new FutureResponse()
          {
             public void run()
             {
+               for (RequestMapper mapper : requestMappers)
+               {
+                  mapper.mapRequest(request);
+               }
+               
                String m = request.getMethod();
                String url = request.getUrl();
                List<String> headers = request.getHeaders();
@@ -1151,4 +1171,8 @@ public class Web
       }
    }
 
+   public static interface RequestMapper
+   {
+      public void mapRequest(Request request);
+   }
 }
