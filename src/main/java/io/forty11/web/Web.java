@@ -87,7 +87,20 @@ public class Web
 
    static Executor                   pool                     = null;
    static Timer                      timer                    = null;
-   public static List<RequestMapper> requestMappers           = new ArrayList();
+   static List<RequestMapper>        requestMappers           = new ArrayList();
+   
+   
+   public static void addRequestMapper(RequestMapper requestMap) {
+      requestMappers.add(requestMap);
+   }
+   
+   public static boolean removeRequestMapper(RequestMapper requestMap) {
+      return requestMappers.remove(requestMap);
+   }
+   
+   public static RequestMapper requestMapperAtIndex(int i) {
+      return requestMappers.get(i);
+   }
 
    public static FutureResponse get(String url)
    {
