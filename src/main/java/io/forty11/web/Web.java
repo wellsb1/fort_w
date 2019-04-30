@@ -75,19 +75,19 @@ import io.forty11.j.utils.Executor;
  */
 public class Web
 {
-   static Log       log                      = LogFactory.getLog(Web.class);
+   static Log                        log                      = LogFactory.getLog(Web.class);
 
-   static final int DEFAULT_TIMEOUT          = 30000;
+   static final int                  DEFAULT_TIMEOUT          = 30000;
 
-   static final int POOL_MIN                 = 2;
-   static final int POOL_MAX                 = 100;
-   static final int QUEUE_MAX                = 500;
-   static final int DEFAULT_RETRY_ATTEMPTS   = 5;
-   static final int TOTAL_MAX_RETRY_ATTEMPTS = 50;
+   static final int                  POOL_MIN                 = 2;
+   static final int                  POOL_MAX                 = 100;
+   static final int                  QUEUE_MAX                = 500;
+   static final int                  DEFAULT_RETRY_ATTEMPTS   = 5;
+   static final int                  TOTAL_MAX_RETRY_ATTEMPTS = 50;
 
-   static Executor  pool                     = null;
-   static Timer     timer                    = null;
-   public static IPMapper ipMapper           = null;
+   static Executor                   pool                     = null;
+   static Timer                      timer                    = null;
+   public static List<RequestMapper> requestMappers           = new ArrayList();
 
    public static FutureResponse get(String url)
    {
@@ -166,6 +166,7 @@ public class Web
 
    public static FutureResponse rest(final Request request)
    {
+
       final FutureResponse future = new FutureResponse()
          {
             public void run()
@@ -174,9 +175,10 @@ public class Web
                String url = request.getUrl();
                List<String> headers = request.getHeaders();
                boolean retryable = true;
-               
-               if(ipMapper != null) {
-                  url = ipMapper.mapIP(url);
+
+               for (RequestMapper mapper : requestMappers)
+               {
+                  mapper.mapRequest(request);
                }
 
                Response response = new Response(url);
@@ -1155,8 +1157,9 @@ public class Web
          setURI(URI.create(url));
       }
    }
-   
-   public static interface IPMapper {
-      public String mapIP(String url);
+
+   public static interface RequestMapper
+   {
+      public void mapRequest(Request request);
    }
 }
