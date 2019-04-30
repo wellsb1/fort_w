@@ -87,6 +87,7 @@ public class Web
 
    static Executor  pool                     = null;
    static Timer     timer                    = null;
+   public static IPMapper ipMapper           = null;
 
    public static FutureResponse get(String url)
    {
@@ -173,6 +174,10 @@ public class Web
                String url = request.getUrl();
                List<String> headers = request.getHeaders();
                boolean retryable = true;
+               
+               if(ipMapper != null) {
+                  url = ipMapper.mapIP(url);
+               }
 
                Response response = new Response(url);
                HttpRequestBase req = null;
@@ -1150,5 +1155,8 @@ public class Web
          setURI(URI.create(url));
       }
    }
-
+   
+   public static interface IPMapper {
+      public String mapIP(String url);
+   }
 }
