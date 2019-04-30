@@ -171,15 +171,15 @@ public class Web
          {
             public void run()
             {
-               String m = request.getMethod();
-               String url = request.getUrl();
-               List<String> headers = request.getHeaders();
-               boolean retryable = true;
-
                for (RequestMapper mapper : requestMappers)
                {
                   mapper.mapRequest(request);
                }
+               
+               String m = request.getMethod();
+               String url = request.getUrl();
+               List<String> headers = request.getHeaders();
+               boolean retryable = true;
 
                Response response = new Response(url);
                HttpRequestBase req = null;
