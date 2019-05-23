@@ -294,9 +294,9 @@ public class Web
                      fileName = J.slugify(u.toString());
 
                   // if we have a retry file and it's length matches the Content-Range header's start and the Content-Range header's unit's are bytes use the existing file
-                  if (response.code == 404)
+                  if (response.code >= 400)// == 404 || response.code > 500)
                   {
-                     retryable = false; // do not allow this to retry on a 404
+                     retryable = false; // do not allow this retry if the server responded with an error
                      return; //will go to finally block
                   }
                   else if (this.getRetryFile() != null && this.getRetryFile().length() == response.getContentRangeStart() && "bytes".equalsIgnoreCase(response.getContentRangeUnit()))
