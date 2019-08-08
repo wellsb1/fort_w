@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
@@ -75,30 +76,32 @@ import io.forty11.j.utils.Executor;
  */
 public class Web
 {
-   static Log                        log                      = LogFactory.getLog(Web.class);
+   static Log                 log                      = LogFactory.getLog(Web.class);
 
-   static final int                  DEFAULT_TIMEOUT          = 30000;
+   static final int           DEFAULT_TIMEOUT          = 30000;
 
-   static final int                  POOL_MIN                 = 2;
-   static final int                  POOL_MAX                 = 100;
-   static final int                  QUEUE_MAX                = 500;
-   static final int                  DEFAULT_RETRY_ATTEMPTS   = 5;
-   static final int                  TOTAL_MAX_RETRY_ATTEMPTS = 50;
+   static final int           POOL_MIN                 = 2;
+   static final int           POOL_MAX                 = 100;
+   static final int           QUEUE_MAX                = 500;
+   static final int           DEFAULT_RETRY_ATTEMPTS   = 5;
+   static final int           TOTAL_MAX_RETRY_ATTEMPTS = 50;
 
-   static Executor                   pool                     = null;
-   static Timer                      timer                    = null;
-   static List<RequestMapper>        requestMappers           = new ArrayList();
-   
-   
-   public static void addRequestMapper(RequestMapper requestMap) {
+   static Executor            pool                     = null;
+   static Timer               timer                    = null;
+   static List<RequestMapper> requestMappers           = new ArrayList();
+
+   public static void addRequestMapper(RequestMapper requestMap)
+   {
       requestMappers.add(requestMap);
    }
-   
-   public static boolean removeRequestMapper(RequestMapper requestMap) {
+
+   public static boolean removeRequestMapper(RequestMapper requestMap)
+   {
       return requestMappers.remove(requestMap);
    }
-   
-   public static RequestMapper requestMapperAtIndex(int i) {
+
+   public static RequestMapper requestMapperAtIndex(int i)
+   {
       return requestMappers.get(i);
    }
 
@@ -188,7 +191,7 @@ public class Web
                {
                   mapper.mapRequest(request);
                }
-               
+
                String m = request.getMethod();
                String url = request.getUrl();
                List<String> headers = request.getHeaders();
@@ -218,7 +221,32 @@ public class Web
                   }
                   else if ("get".equalsIgnoreCase(m))
                   {
-                     req = new HttpGet(url);
+                     try
+                     {
+                        req = new HttpGet(url);
+                     }
+                     catch (IllegalArgumentException e)
+                     {
+                        //This probably happened because a querystring was not correctly URL encoded.  Going to try to fix it
+                        List<String> parts = J.explode("&", url);
+                        url = parts.get(0);
+
+                        if (url.indexOf("?") > 0)
+                        {
+                           url = url.substring(0, url.indexOf("?") + 1) + URLEncoder.encode(url.substring(url.indexOf("?") + 1, url.length()));
+                        }
+                        else
+                        {
+                           throw e;//no query so encoding is not the problem;
+                        }
+
+                        for (int i = 1; i < parts.size(); i++)
+                        {
+                           url += "&" + URLEncoder.encode(parts.get(i));
+                        }
+
+                        req = new HttpGet(url);
+                     }
 
                      if (this.getRetryFile() != null && this.getRetryFile().length() > 0)
                      {
