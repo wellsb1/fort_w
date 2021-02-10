@@ -8,6 +8,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class JS
 {
+   private static final ObjectMapper mapper = new ObjectMapper();
+   
    public static JSArray toJSArray(String json)
    {
       return ((JSArray) parse(json));
@@ -41,7 +43,6 @@ public class JS
    {
       try
       {
-         ObjectMapper mapper = new ObjectMapper();
          JsonNode rootNode = mapper.readValue(js, JsonNode.class);
 
          Object parsed = map(rootNode);
