@@ -92,8 +92,8 @@ public class Web
    static         Executor                           pool                      = null;
    static         Timer                              timer                     = null;
    static         List<RequestMapper>                requestMappers            = new ArrayList();
-   static         SSLContext                         sslContext                = null;
-   static         PoolingHttpClientConnectionManager connMgr;
+   static         HttpClient                         client;
+   static         PoolingHttpClientConnectionManager connectionManager;
    private static boolean                            breakConnectionManagement = false;
 
    public static void addRequestMapper(RequestMapper requestMap)
@@ -475,7 +475,8 @@ public class Web
    }
 
    /**
-    * Make connection management work like it worked before the fix.
+    * Make connection management work like it worked before the fix. This means a new connection
+    * pool will be created for each request.
     * @param breakIt True to break it.
     */
    public static void breakConnectionManagement(boolean breakIt)
@@ -486,34 +487,40 @@ public class Web
    /**
     * Returns the static connectionmanager, so you can configure things like pool size. 
     */
-   public static PoolingHttpClientConnectionManager configureConnectionManager()
-         throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException
+   public static synchronized PoolingHttpClientConnectionManager configureConnectionManager() throws Exception
    {
-      return getConnectionManager(getSSLContext());
+      //the connection manager is initialized when the client is initialized, so init if that hasn't happened
+      if(client == null)
+      {
+         getHttpClient();
+      }
+      
+      return connectionManager;
    }
    
-   private static SSLContext getSSLContext() throws KeyStoreException, NoSuchAlgorithmException, KeyManagementException
+   /**
+    * @see http://literatejava.com/networks/ignore-ssl-certificate-errors-apache-httpclient-4-4/
+    * @return
+    * @throws Exception
+    */
+   public static synchronized HttpClient getHttpClient() throws Exception
    {
-      if (sslContext == null)
+      if (client == null || breakConnectionManagement)
       {
+         HttpClientBuilder b = HttpClientBuilder.create();
+         
          // setup a Trust Strategy that allows all certificates.
          //
-         sslContext = new SSLContextBuilder().loadTrustMaterial(null, new TrustStrategy()
+         SSLContext sslContext = new SSLContextBuilder().loadTrustMaterial(null, new TrustStrategy()
             {
                public boolean isTrusted(X509Certificate[] arg0, String arg1) throws CertificateException
                {
                   return true;
                }
             }).build();
-      }
-
-      return sslContext;
-   }
-   
-   private static synchronized PoolingHttpClientConnectionManager getConnectionManager(SSLContext sslContext)
-   {
-      if (connMgr == null || breakConnectionManagement)
-      {
+         b.setSslcontext(sslContext);
+         
+         
          // don't check Hostnames, either.
          //      -- use SSLConnectionSocketFactory.getDefaultHostnameVerifier(), if you don't want to weaken
          HostnameVerifier hostnameVerifier = SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER;
@@ -527,35 +534,19 @@ public class Web
    
          // now, we create connection-manager using our Registry.
          //      -- allows multi-threaded use
-         connMgr = new PoolingHttpClientConnectionManager(RegistryBuilder.<ConnectionSocketFactory> create().register("http", PlainConnectionSocketFactory.getSocketFactory()).register("https", sslSocketFactory).build());
-         connMgr.setDefaultMaxPerRoute(Math.max(POOL_MAX/4, 3));
-         connMgr.setMaxTotal(POOL_MAX);
-      }
-      
-      return connMgr;
-   }
+         connectionManager = new PoolingHttpClientConnectionManager(RegistryBuilder.<ConnectionSocketFactory> create().register("http", PlainConnectionSocketFactory.getSocketFactory()).register("https", sslSocketFactory).build());
+         connectionManager.setDefaultMaxPerRoute(Math.max(POOL_MAX/4, 3));
+         connectionManager.setMaxTotal(POOL_MAX);
+         
+         b.setConnectionManager(connectionManager);
    
-   /**
-    * @see http://literatejava.com/networks/ignore-ssl-certificate-errors-apache-httpclient-4-4/
-    * @return
-    * @throws Exception
-    */
-   public static synchronized HttpClient getHttpClient() throws Exception
-   {
-      HttpClientBuilder b = HttpClientBuilder.create();
-
-      SSLContext sslContext = getSSLContext();
-      b.setSslcontext(sslContext);
-      
-      PoolingHttpClientConnectionManager connectionManager = getConnectionManager(sslContext);
-      b.setConnectionManager(connectionManager);
-
-      RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(DEFAULT_TIMEOUT).setConnectTimeout(DEFAULT_TIMEOUT).setConnectionRequestTimeout(DEFAULT_TIMEOUT).build();
-      b.setDefaultRequestConfig(requestConfig);
-
-      // finally, build the HttpClient;
-      //      -- done!
-      HttpClient client = b.build();
+         RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(DEFAULT_TIMEOUT).setConnectTimeout(DEFAULT_TIMEOUT).setConnectionRequestTimeout(DEFAULT_TIMEOUT).build();
+         b.setDefaultRequestConfig(requestConfig);
+         
+         // finally, build the HttpClient;
+         //      -- done!
+         client = b.build();
+      }
 
       return client;
    }
