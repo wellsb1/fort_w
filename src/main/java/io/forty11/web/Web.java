@@ -26,6 +26,9 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
@@ -86,9 +89,12 @@ public class Web
    static final int           DEFAULT_RETRY_ATTEMPTS   = 5;
    static final int           TOTAL_MAX_RETRY_ATTEMPTS = 50;
 
-   static Executor            pool                     = null;
-   static Timer               timer                    = null;
-   static List<RequestMapper> requestMappers           = new ArrayList();
+   static         Executor                           pool                      = null;
+   static         Timer                              timer                     = null;
+   static         List<RequestMapper>                requestMappers            = new ArrayList();
+   static         HttpClient                         client;
+   static         PoolingHttpClientConnectionManager connectionManager;
+   private static boolean                            breakConnectionManagement = false;
 
    public static void addRequestMapper(RequestMapper requestMap)
    {
@@ -469,47 +475,78 @@ public class Web
    }
 
    /**
+    * Make connection management work like it worked before the fix. This means a new connection
+    * pool will be created for each request.
+    * @param breakIt True to break it.
+    */
+   public static void breakConnectionManagement(boolean breakIt)
+   {
+      breakConnectionManagement = breakIt;
+   }
+
+   /**
+    * Returns the static connectionmanager, so you can configure things like pool size. 
+    */
+   public static synchronized PoolingHttpClientConnectionManager configureConnectionManager() throws Exception
+   {
+      //the connection manager is initialized when the client is initialized, so init if that hasn't happened
+      if(client == null)
+      {
+         getHttpClient();
+      }
+      
+      return connectionManager;
+   }
+   
+   /**
     * @see http://literatejava.com/networks/ignore-ssl-certificate-errors-apache-httpclient-4-4/
     * @return
     * @throws Exception
     */
    public static synchronized HttpClient getHttpClient() throws Exception
    {
-      HttpClientBuilder b = HttpClientBuilder.create();
-
-      // setup a Trust Strategy that allows all certificates.
-      //
-      SSLContext sslContext = new SSLContextBuilder().loadTrustMaterial(null, new TrustStrategy()
-         {
-            public boolean isTrusted(X509Certificate[] arg0, String arg1) throws CertificateException
+      if (client == null || breakConnectionManagement)
+      {
+         HttpClientBuilder b = HttpClientBuilder.create();
+         
+         // setup a Trust Strategy that allows all certificates.
+         //
+         SSLContext sslContext = new SSLContextBuilder().loadTrustMaterial(null, new TrustStrategy()
             {
-               return true;
-            }
-         }).build();
-      b.setSslcontext(sslContext);
-
-      // don't check Hostnames, either.
-      //      -- use SSLConnectionSocketFactory.getDefaultHostnameVerifier(), if you don't want to weaken
-      HostnameVerifier hostnameVerifier = SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER;
-
-      // here's the special part:
-      //      -- need to create an SSL Socket Factory, to use our weakened "trust strategy";
-      //      -- and create a Registry, to register it.
-      //
-      SSLConnectionSocketFactory sslSocketFactory = new SSLConnectionSocketFactory(sslContext, hostnameVerifier);
-      //Registry<ConnectionSocketFactory> socketFactoryRegistry = ;
-
-      // now, we create connection-manager using our Registry.
-      //      -- allows multi-threaded use
-      PoolingHttpClientConnectionManager connMgr = new PoolingHttpClientConnectionManager(RegistryBuilder.<ConnectionSocketFactory> create().register("http", PlainConnectionSocketFactory.getSocketFactory()).register("https", sslSocketFactory).build());
-      b.setConnectionManager(connMgr);
-
-      RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(DEFAULT_TIMEOUT).setConnectTimeout(DEFAULT_TIMEOUT).setConnectionRequestTimeout(DEFAULT_TIMEOUT).build();
-      b.setDefaultRequestConfig(requestConfig);
-
-      // finally, build the HttpClient;
-      //      -- done!
-      HttpClient client = b.build();
+               public boolean isTrusted(X509Certificate[] arg0, String arg1) throws CertificateException
+               {
+                  return true;
+               }
+            }).build();
+         b.setSslcontext(sslContext);
+         
+         
+         // don't check Hostnames, either.
+         //      -- use SSLConnectionSocketFactory.getDefaultHostnameVerifier(), if you don't want to weaken
+         HostnameVerifier hostnameVerifier = SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER;
+   
+         // here's the special part:
+         //      -- need to create an SSL Socket Factory, to use our weakened "trust strategy";
+         //      -- and create a Registry, to register it.
+         //
+         SSLConnectionSocketFactory sslSocketFactory = new SSLConnectionSocketFactory(sslContext, hostnameVerifier);
+         //Registry<ConnectionSocketFactory> socketFactoryRegistry = ;
+   
+         // now, we create connection-manager using our Registry.
+         //      -- allows multi-threaded use
+         connectionManager = new PoolingHttpClientConnectionManager(RegistryBuilder.<ConnectionSocketFactory> create().register("http", PlainConnectionSocketFactory.getSocketFactory()).register("https", sslSocketFactory).build());
+         connectionManager.setDefaultMaxPerRoute(Math.max(POOL_MAX/4, 3));
+         connectionManager.setMaxTotal(POOL_MAX);
+         
+         b.setConnectionManager(connectionManager);
+   
+         RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(DEFAULT_TIMEOUT).setConnectTimeout(DEFAULT_TIMEOUT).setConnectionRequestTimeout(DEFAULT_TIMEOUT).build();
+         b.setDefaultRequestConfig(requestConfig);
+         
+         // finally, build the HttpClient;
+         //      -- done!
+         client = b.build();
+      }
 
       return client;
    }

@@ -21,6 +21,7 @@ import io.forty11.j.J;
 
 public class JSObject
 {
+   private static final JsonFactory jsonFactory = new JsonFactory();
    LinkedHashMap<String, Property> properties = new LinkedHashMap();
 
    public JSObject()
@@ -70,6 +71,7 @@ public class JSObject
       Property p = getProperty(name);
       if (p != null)
          return p.getValue();
+      
 
       return null;
    }
@@ -272,14 +274,14 @@ public class JSObject
       try
       {
          ByteArrayOutputStream baos = new ByteArrayOutputStream();
-         JsonGenerator json = new JsonFactory().createGenerator(baos);
+         JsonGenerator json = jsonFactory.createGenerator(baos);
          if (pretty)
             json.useDefaultPrettyPrinter();
          write(json, new HashSet(), lowercaseNames);
          json.flush();
          baos.flush();
 
-         return new String(baos.toByteArray());
+         return baos.toString();
       }
       catch (Exception ex)
       {
