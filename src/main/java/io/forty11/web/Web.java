@@ -382,6 +382,8 @@ public class Web
                   {
                      log.warn("Exception in rest call. " + url, ex);
                   }
+                  //TODO test
+                  this.setResponse(response);
 
                }
                finally
